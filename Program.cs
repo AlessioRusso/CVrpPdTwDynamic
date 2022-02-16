@@ -596,7 +596,6 @@ public class VrpPickupDelivery
 
         List<List<Tuple<string, long, long>>> solution_map = PrintSolution(data, routing, manager, solution, map);
         BiMap<string, int> map_new = new BiMap<string, int>() { };
-
         List<int> present = new List<int> { 1, 3};
 
         long[,] locations_rider_new = new long[data.VehicleNumber, 2];
