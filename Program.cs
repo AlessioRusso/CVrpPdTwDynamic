@@ -18,7 +18,7 @@ public class VrpPickupDelivery
         public int[][] PickupsDeliveries { get; private set; }
         public int Depot = 0;
         public int pick_service_time = 2;
-        public int delivery_service_time = 3;
+        public int delivery_service_time = 1;
         public int[] Starts = { };
         public int[] Ends = { };
 
@@ -102,9 +102,8 @@ public class VrpPickupDelivery
             sw.WriteLine();
             solution_map.Add(solution_map_rider);
         }
-        Console.WriteLine("");
-        Console.WriteLine("Total time of all routes: {0}", totalTime);
-
+        Console.WriteLine("------------------------------------------------");
+        
         sw.Close();
         return solution_map;
     }
@@ -369,17 +368,10 @@ public class VrpPickupDelivery
                 // Convert from routing variable Index to time matrix NodeIndex.
                 var fromNode = manager.IndexToNode(fromIndex);
                 var toNode = manager.IndexToNode(toIndex);
-
-                if (fromNode == data.Starts[j] || distanceMatrix[fromNode, toNode]==0 )
-                {
-                    return (int)((distanceMatrix[fromNode, toNode]) * data.VehicleCost[j]) / data.VehicleSpeed[j];
-                }
-
                 if (toNode == 0)
                 {
                     return 0;
                 }
-
                 for (int i = 0; i < data.PickupsDeliveries.Count(); i++)
                 {
                     if (fromNode == data.PickupsDeliveries[i][0])
@@ -388,9 +380,14 @@ public class VrpPickupDelivery
                         return (int)((distanceMatrix[fromNode, toNode] * data.VehicleCost[j]) / data.VehicleSpeed[j])
                                     + data.pick_service_time;
                     }
+                    if (fromNode == data.PickupsDeliveries[i][1])
+                    {
+                        //Console.WriteLine("{0}->{1}={2}", fromNode, toNode, (int)((distanceMatrix[fromNode, toNode] * data.VehicleCost[j])/data.VehicleSpeed[j]) + data.pick_service_time);
+                        return (int)((distanceMatrix[fromNode, toNode] * data.VehicleCost[j]) / data.VehicleSpeed[j])
+                                    + data.delivery_service_time;
+                    }
                 }
-                return (int)((distanceMatrix[fromNode, toNode]) * data.VehicleCost[j]) / data.VehicleSpeed[j]
-                            + data.delivery_service_time;
+                return (int)((distanceMatrix[fromNode, toNode]) * data.VehicleCost[j]) / data.VehicleSpeed[j];
 
             }
             );
@@ -413,7 +410,7 @@ public class VrpPickupDelivery
         }
 
         RoutingDimension time_routeDimension = routing.GetMutableDimension("TimeRoute");
-        time_routeDimension.SetGlobalSpanCostCoefficient(0);
+        time_routeDimension.SetGlobalSpanCostCoefficient(10);
 
         for (int i = 0; i < data.VehicleNumber; ++i)
         {
@@ -575,28 +572,25 @@ public class VrpPickupDelivery
                                         Pd, map, speed, cost, cargo, VehicleNumber);
 
 
-
         // Create Routing Index Manager
         RoutingIndexManager manager =
             new RoutingIndexManager(data.Locations.GetLength(0), data.VehicleNumber, data.Starts, data.Ends);
 
         long[,] distanceMatrix = ComputeEuclideanDistanceMatrix(data.Locations);
 
-        // Create Routing Model.
         RoutingModel routing = CreateRoutingModel(manager, data, distanceMatrix, null, null, null);
-        // Setting first solution heuristic.
         RoutingSearchParameters searchParameters =
             operations_research_constraint_solver.DefaultRoutingSearchParameters();
         searchParameters.TimeLimit = new Duration { Seconds = 100 };
-        //searchParameters.LocalSearchMetaheuristic = LocalSearchMetaheuristic.Types.Value.GuidedLocalSearch;
         searchParameters.FirstSolutionStrategy = FirstSolutionStrategy.Types.Value.PathCheapestArc;
-        // Solve the problem.
         Assignment solution = routing.SolveWithParameters(searchParameters);
-        // Print solution on console.
+
+
 
         List<List<Tuple<string, long, long>>> solution_map = PrintSolution(data, routing, manager, solution, map);
         BiMap<string, int> map_new = new BiMap<string, int>() { };
-        List<int> present = new List<int> { 1, 3};
+
+        List<int> present = new List<int> {3, 3};
 
         long[,] locations_rider_new = new long[data.VehicleNumber, 2];
         long[,] tw_rider_new = new long[data.VehicleNumber, 2];
@@ -609,7 +603,7 @@ public class VrpPickupDelivery
             locations_rider_new[i, 0] = data.Locations[toIndex, 0];
             locations_rider_new[i, 1] = data.Locations[toIndex, 1];
             tw_rider_new[i, 0] = solution_map[i][present[i]].Item2;
-            tw_rider_new[i, 1] = 1236;
+            tw_rider_new[i, 1] = solution_map[i][present[i]].Item3;
         }
 
 
@@ -619,17 +613,17 @@ public class VrpPickupDelivery
             long actualCargo = 0;
             for (int j = 1; j < solution_map[i].Count & j < present[i]; j++)
             {
-                string node_pick;
+                string node_del;
                 try
                 {
-                    node_pick = Pd_map.Forward[solution_map[i][j].Item1];
+                    node_del = Pd_map.Forward[solution_map[i][j].Item1];
                 }
                 catch
                 {
-                    node_pick = null;
+                    node_del = null;
                 }
 
-                if (node_pick != null)
+                if (node_del != null)
                 {
                     actualCargo += data.Demands[map.Forward[solution_map[i][j].Item1]];
                 }
@@ -648,9 +642,11 @@ public class VrpPickupDelivery
             if (present[i] != 0)
                 past += present[i] - 1;
         }
+
+        int new_loc = 2;
         List<long> demands_new = new List<long>();
-        long[,] locations_new = new long[locations.GetLength(0) - past, 2];
-        long[,] tw_new = new long[locations.GetLength(0) - past, 2];
+        long[,] locations_new = new long[locations.GetLength(0) - past + new_loc, 2];
+        long[,] tw_new = new long[locations.GetLength(0) - past + new_loc, 2];
         List<List<string>> started_deliveries = new List<List<string>>();
         List<List<Tuple<string, string>>> pd_constraints = new List<List<Tuple<string, string>>>();
         List<Tuple<string, string>> Pd_new = new List<Tuple<string, string>> { };
@@ -709,7 +705,23 @@ public class VrpPickupDelivery
             started_deliveries.Add(single_delivery);
             pd_constraints.Add(pick_delivery_constraint);
         }
+        
+        locations_new[n_loc, 0] = -1;
+        locations_new[n_loc, 1] = 4;
+        tw_new[n_loc, 0] = 16;
+        tw_new[n_loc, 1] = 1000;
+        demands_new.Add(10);
+        map_new.Add("nodeD", n_loc + data.VehicleNumber);
+        n_loc++;
+        locations_new[n_loc, 0] = -1;
+        locations_new[n_loc, 1] = 5;
+        tw_new[n_loc, 0] = 35;
+        tw_new[n_loc, 1] = 100;
+        demands_new.Add(-10);
+        map_new.Add("nodeDD", n_loc + data.VehicleNumber);
+        n_loc++;
 
+        Pd_new.Add(Tuple.Create("nodeD", "nodeDD"));
 
         data = BuildDataModel(locations_rider_new, locations_new, tw_rider_new, tw_new, demands_new, cap_rider,
                                     Pd_new, map_new, speed, cost, cargo_new, VehicleNumber);
@@ -731,7 +743,6 @@ public class VrpPickupDelivery
         // Solve the problem.
         solution = routing.SolveWithParameters(searchParameters);
         // Print solution on console.
-
         solution_map = PrintSolution(data, routing, manager, solution, map_new);
 
     }
