@@ -103,7 +103,7 @@ public class VrpPickupDelivery
             solution_map.Add(solution_map_rider);
         }
         Console.WriteLine("------------------------------------------------");
-        
+
         sw.Close();
         return solution_map;
     }
@@ -450,7 +450,7 @@ public class VrpPickupDelivery
             routing.AddVariableMinimizedByFinalizer(timeDimension.CumulVar(deliveryIndex));
         }
 
-    
+
 
         if (started_deliveries != null)
         {
@@ -462,7 +462,7 @@ public class VrpPickupDelivery
                 }
             }
         }
-     
+
         if (pd_constraints != null)
         {
             for (int i = 0; i < pd_constraints.Count; i++)
@@ -590,7 +590,7 @@ public class VrpPickupDelivery
         List<List<Tuple<string, long, long>>> solution_map = PrintSolution(data, routing, manager, solution, map);
         BiMap<string, int> map_new = new BiMap<string, int>() { };
 
-        List<int> present = new List<int> {3, 3};
+        List<int> present = new List<int> { 3, 2 };
 
         long[,] locations_rider_new = new long[data.VehicleNumber, 2];
         long[,] tw_rider_new = new long[data.VehicleNumber, 2];
@@ -613,24 +613,7 @@ public class VrpPickupDelivery
             long actualCargo = 0;
             for (int j = 1; j < solution_map[i].Count & j < present[i]; j++)
             {
-                string node_del;
-                try
-                {
-                    node_del = Pd_map.Forward[solution_map[i][j].Item1];
-                }
-                catch
-                {
-                    node_del = null;
-                }
-
-                if (node_del != null)
-                {
-                    actualCargo += data.Demands[map.Forward[solution_map[i][j].Item1]];
-                }
-                else
-                {
-                    actualCargo -= data.Demands[map.Forward[solution_map[i][j].Item1]];
-                }
+                actualCargo += data.Demands[map.Forward[solution_map[i][j].Item1]];
 
             }
             cargo_new[i] = actualCargo;
@@ -705,16 +688,16 @@ public class VrpPickupDelivery
             started_deliveries.Add(single_delivery);
             pd_constraints.Add(pick_delivery_constraint);
         }
-        
-        locations_new[n_loc, 0] = -1;
-        locations_new[n_loc, 1] = 4;
-        tw_new[n_loc, 0] = 16;
+
+        locations_new[n_loc, 0] = 1;
+        locations_new[n_loc, 1] = 5;
+        tw_new[n_loc, 0] = 5;
         tw_new[n_loc, 1] = 1000;
         demands_new.Add(10);
         map_new.Add("nodeD", n_loc + data.VehicleNumber);
         n_loc++;
-        locations_new[n_loc, 0] = -1;
-        locations_new[n_loc, 1] = 5;
+        locations_new[n_loc, 0] = 1;
+        locations_new[n_loc, 1] = 8;
         tw_new[n_loc, 0] = 35;
         tw_new[n_loc, 1] = 100;
         demands_new.Add(-10);
