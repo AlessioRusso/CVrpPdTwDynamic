@@ -7,12 +7,12 @@ public class VrpPickupDelivery
 {
     class DataModel
     {
-        public int VehicleNumber { get; private set; }
-        public long[] VehicleCapacities { get; private set; }
+        public int vehicleNumber { get; private set; }
+        public long[] vehicleCapacities { get; private set; }
         public long[] Cargo { get; private set; }
         public long[] Demands { get; private set; }
-        public int[] VehicleCost { get; private set; }
-        public int[] VehicleSpeed { get; private set; }
+        public int[] vehicleCost { get; private set; }
+        public int[] vehicleSpeed { get; private set; }
         public long[,] Locations { get; private set; }
         public long[,] TimeWindows { get; private set; }
         public int[][] PickupsDeliveries { get; private set; }
@@ -26,20 +26,20 @@ public class VrpPickupDelivery
                         long[,] tw, int[][] pickDel, List<int> starts, List<int> ends,
                         List<int> speed, List<int> cost, long[] cargo)
         {
-            VehicleNumber = n;
+            this.vehicleNumber = n;
             Starts = starts.ToArray();
             Ends = ends.ToArray();
-            VehicleCapacities = cap.ToArray();
+            vehicleCapacities = cap.ToArray();
             Demands = dem.ToArray();
             Locations = loc;
             TimeWindows = tw;
             PickupsDeliveries = pickDel;
-            VehicleCost = new int[this.VehicleNumber];
-            VehicleSpeed = new int[this.VehicleNumber];
-            for (int i = 0; i < this.VehicleNumber; i++)
+            vehicleCost = new int[this.vehicleNumber];
+            vehicleSpeed = new int[this.vehicleNumber];
+            for (int i = 0; i < this.vehicleNumber; i++)
             {
-                VehicleCost[i] = cost[i];
-                VehicleSpeed[i] = speed[i];
+                vehicleCost[i] = cost[i];
+                vehicleSpeed[i] = speed[i];
             }
             Cargo = cargo;
         }
@@ -68,14 +68,14 @@ public class VrpPickupDelivery
 
 
     static List<List<Tuple<string, long, long>>> PrintSolution(in DataModel data, in RoutingModel routing, in RoutingIndexManager manager,
-                            in Assignment solution, in BiMap<string, int> map)
+                            in Assignment solution, in BiMap<string, int> map, int run)
     {
         List<List<Tuple<string, long, long>>> solution_map = new List<List<Tuple<string, long, long>>>() { };
         Console.WriteLine($"Objective {solution.ObjectiveValue()}:");
-        StreamWriter sw = new StreamWriter("solution.csv");
+        StreamWriter sw = new StreamWriter($"solution{run}.csv");
         RoutingDimension timeDimension = routing.GetMutableDimension("Time");
         long totalTime = 0;
-        for (int i = 0; i < data.VehicleNumber; ++i)
+        for (int i = 0; i < data.vehicleNumber; ++i)
         {
             List<Tuple<string, long, long>> solution_map_rider = new List<Tuple<string, long, long>>() { };
             Console.WriteLine();
@@ -112,7 +112,7 @@ public class VrpPickupDelivery
 
     static string[] SplitInput(StreamReader input)
     {
-        string line = input.ReadLine();
+        string? line = input.ReadLine();
         if (line == null) return new string[0];
         return line.Split(new[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
     }
@@ -130,8 +130,7 @@ public class VrpPickupDelivery
             List<Tuple<int, int>> coordinates = new List<Tuple<int, int>>();
             List<Tuple<int, int>> times = new List<Tuple<int, int>>();
 
-            StreamWriter sw = new StreamWriter("locations.csv");
-
+       
             // read first row
             string[] splitted;
             splitted = SplitInput(input);
@@ -149,10 +148,7 @@ public class VrpPickupDelivery
 
             int depotX = int.Parse(splitted[1]);
             int depotY = int.Parse(splitted[2]);
-            sw.Write(depotX.ToString() + " ");
-            sw.Write(depotY.ToString() + " ");
-            sw.WriteLine();
-
+       
             int ready_depot = int.Parse(splitted[4]);
             int due_depot = int.Parse(splitted[5]);
             demands.Add(0);
@@ -167,9 +163,6 @@ public class VrpPickupDelivery
                 map.Add(splitted[0], n + n_loc);
                 n_loc++;
                 coordinates.Add(new Tuple<int, int>(int.Parse(splitted[1]), int.Parse(splitted[2])));
-                sw.Write(splitted[1].ToString() + " ");
-                sw.Write(splitted[2].ToString() + " ");
-                sw.WriteLine();
                 demands.Add(int.Parse(splitted[3]));
                 times.Add(new Tuple<int, int>(int.Parse(splitted[4]), int.Parse(splitted[5])));
                 if (splitted[7] == "-")
@@ -177,8 +170,7 @@ public class VrpPickupDelivery
                     Pd.Add(new Tuple<string, string>(splitted[0], splitted[8]));
                 }
             }
-            sw.Close();
-
+       
             // initialize time windows and locations
             int n_nodes = coordinates.Count;
             Locations = new long[n_nodes + 1, 2];
@@ -212,7 +204,7 @@ public class VrpPickupDelivery
     // The input files follow the "Li & Lim" format
     static void ReadRiderInput(string fileName, ref List<long> cap_rider,
                           ref long[,] Locations_riders, ref long[,] tw_rider,
-                          ref List<int> speed, ref List<int> cost, int VehicleNumber)
+                          ref List<int> speed, ref List<int> cost, int vehicleNumber)
     {
         if (fileName == "")
         {
@@ -221,11 +213,10 @@ public class VrpPickupDelivery
 
         using (StreamReader input = new StreamReader(fileName))
         {
-            StreamWriter sw = new StreamWriter("locations_rider.csv");
-
+       
             string[] splitted;
-            Locations_riders = new long[VehicleNumber, 2];
-            tw_rider = new long[VehicleNumber, 2];
+            Locations_riders = new long[vehicleNumber, 2];
+            tw_rider = new long[vehicleNumber, 2];
             int i = 0;
 
             while (!input.EndOfStream)
@@ -237,9 +228,6 @@ public class VrpPickupDelivery
                 Locations_riders[i, 0] = int.Parse(splitted[1]);
                 Locations_riders[i, 1] = int.Parse(splitted[2]);
 
-                sw.Write(splitted[1].ToString() + " ");
-                sw.Write(splitted[2].ToString() + " ");
-                sw.WriteLine();
                 cap_rider.Add(int.Parse(splitted[5]));
                 tw_rider[i, 0] = int.Parse(splitted[3]);
                 tw_rider[i, 1] = int.Parse(splitted[4]);
@@ -247,7 +235,6 @@ public class VrpPickupDelivery
                 cost.Add(int.Parse(splitted[7]));
                 i = i + 1;
             }
-            sw.Close();
         }
     }
 
@@ -258,7 +245,7 @@ public class VrpPickupDelivery
                                List<int> speed,
                                List<int> cost,
                                long[] cargo,
-                               int VehicleNumber
+                               int vehicleNumber
     )
 
     {
@@ -270,7 +257,7 @@ public class VrpPickupDelivery
         List<int> starts = new List<int>();
         List<int> ends = new List<int>();
 
-        for (int i = 0; i < VehicleNumber; i++)
+        for (int i = 0; i < vehicleNumber; i++)
         {
             starts.Add(i + 1);
             ends.Add(0);
@@ -302,7 +289,7 @@ public class VrpPickupDelivery
         }
 
         // add demand rider
-        for (int i = 0; i < VehicleNumber; i++)
+        for (int i = 0; i < vehicleNumber; i++)
         {
             new_demands.Add(0);
         }
@@ -320,7 +307,7 @@ public class VrpPickupDelivery
         }
 
         // First Run
-        return new DataModel(VehicleNumber, cap_rider, new_demands, new_locations, new_tw, mapped_pd, starts, ends, speed, cost, cargo);
+        return new DataModel(vehicleNumber, cap_rider, new_demands, new_locations, new_tw, mapped_pd, starts, ends, speed, cost, cargo);
     }
 
     static RoutingModel CreateRoutingModel(RoutingIndexManager manager,
@@ -344,22 +331,22 @@ public class VrpPickupDelivery
         });
 
         routing.AddDimensionWithVehicleCapacity(demandCallbackIndex, 0, // null capacity slack
-                                                data.VehicleCapacities, // vehicle maximum capacities
+                                                data.vehicleCapacities, // vehicle maximum capacities
                                                 false,                   // start cumul to zero
                                                 "Capacity");
 
         var capacityDimension = routing.GetDimensionOrDie("Capacity");
 
 
-        for (int i = 0; i < data.VehicleNumber; i++)
+        for (int i = 0; i < data.vehicleNumber; i++)
         {
             var index = routing.Start(i);
             capacityDimension.CumulVar(index).SetValue(data.Cargo[i]);
         }
 
-        int[] transitCallbackIndexAll = new int[data.VehicleNumber];
+        int[] transitCallbackIndexAll = new int[data.vehicleNumber];
         //populate each vehicle's transitcallback
-        for (int i = 0; i < data.VehicleNumber; ++i)
+        for (int i = 0; i < data.vehicleNumber; ++i)
         {
             int j = i;
             transitCallbackIndexAll[i] = routing.RegisterTransitCallback(
@@ -376,29 +363,29 @@ public class VrpPickupDelivery
                 {
                     if (fromNode == data.PickupsDeliveries[i][0])
                     {
-                        //Console.WriteLine("{0}->{1}={2}", fromNode, toNode, (int)((distanceMatrix[fromNode, toNode] * data.VehicleCost[j])/data.VehicleSpeed[j]) + data.pick_service_time);
-                        return (int)((distanceMatrix[fromNode, toNode] * data.VehicleCost[j]) / data.VehicleSpeed[j])
+                        //Console.WriteLine("{0}->{1}={2}", fromNode, toNode, (int)((distanceMatrix[fromNode, toNode] * data.vehicleCost[j])/data.vehicleSpeed[j]) + data.pick_service_time);
+                        return (int)((distanceMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j])
                                     + data.pick_service_time;
                     }
                     if (fromNode == data.PickupsDeliveries[i][1])
                     {
-                        //Console.WriteLine("{0}->{1}={2}", fromNode, toNode, (int)((distanceMatrix[fromNode, toNode] * data.VehicleCost[j])/data.VehicleSpeed[j]) + data.pick_service_time);
-                        return (int)((distanceMatrix[fromNode, toNode] * data.VehicleCost[j]) / data.VehicleSpeed[j])
+                        //Console.WriteLine("{0}->{1}={2}", fromNode, toNode, (int)((distanceMatrix[fromNode, toNode] * data.vehicleCost[j])/data.vehicleSpeed[j]) + data.pick_service_time);
+                        return (int)((distanceMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j])
                                     + data.delivery_service_time;
                     }
                 }
-                return (int)((distanceMatrix[fromNode, toNode]) * data.VehicleCost[j]) / data.VehicleSpeed[j];
+                return (int)((distanceMatrix[fromNode, toNode]) * data.vehicleCost[j]) / data.vehicleSpeed[j];
 
             }
             );
         }
 
-        for (int i = 0; i < data.VehicleNumber; ++i)
+        for (int i = 0; i < data.vehicleNumber; ++i)
         {
             routing.SetArcCostEvaluatorOfVehicle(transitCallbackIndexAll[i], i);
         };
 
-        for (int i = 0; i < data.VehicleNumber; ++i)
+        for (int i = 0; i < data.vehicleNumber; ++i)
         {
 
             routing.AddDimension(transitCallbackIndexAll[i],
@@ -412,7 +399,7 @@ public class VrpPickupDelivery
         RoutingDimension time_routeDimension = routing.GetMutableDimension("TimeRoute");
         time_routeDimension.SetGlobalSpanCostCoefficient(10);
 
-        for (int i = 0; i < data.VehicleNumber; ++i)
+        for (int i = 0; i < data.vehicleNumber; ++i)
         {
             routing.AddDimension(transitCallbackIndexAll[i], // transit callback
                         3000,                   // allow waiting time
@@ -423,7 +410,7 @@ public class VrpPickupDelivery
         RoutingDimension timeDimension = routing.GetMutableDimension("Time");
 
         // Add time window constraints for each location except depot.
-        int tw_init = data.VehicleNumber + 1;
+        int tw_init = data.vehicleNumber + 1;
 
         for (int i = tw_init; i < data.TimeWindows.GetLength(0); ++i)
         {
@@ -432,7 +419,7 @@ public class VrpPickupDelivery
             timeDimension.SetCumulVarSoftUpperBound(index, data.TimeWindows[i, 0], 1000000000);
         }
         // Add time window constraints for each vehicle start node.
-        for (int i = 0; i < data.VehicleNumber; ++i)
+        for (int i = 0; i < data.vehicleNumber; ++i)
         {
             long index = routing.Start(i);
             timeDimension.CumulVar(index).SetRange(data.TimeWindows[i + 1, 0], data.TimeWindows[i + 1, 1]);
@@ -481,7 +468,7 @@ public class VrpPickupDelivery
     static bool isDeliveryIsPastPickUp(string node, List<Tuple<string, long, long>> route,
                                     BiMap<string, string> Pd_map, int present)
     {
-        string pick = null;
+        string? pick = null;
         try
         {
             pick = Pd_map.Reverse[node];
@@ -502,7 +489,7 @@ public class VrpPickupDelivery
     static bool isDeliveryIsFuturePickUp(string node, List<Tuple<string, long, long>> route,
                                 BiMap<string, string> Pd_map, int present)
     {
-        string pick = null;
+        string? pick = null;
         try
         {
             pick = Pd_map.Reverse[node];
@@ -518,6 +505,37 @@ public class VrpPickupDelivery
         }
 
         return true;
+    }
+    static void SaveWorldLocations(long[,] ridersLocations,
+                                   long[,] pdLocations,
+                                   BiMap<string, int> map,
+                                   int run)
+    {
+        StreamWriter swRider = new StreamWriter($"locationsRider{run}.csv");
+        var rider = ridersLocations.GetLength(0);
+        for (int i = 0; i < ridersLocations.GetLength(0); i++)
+        {
+            swRider.Write(map.Reverse[i + 1] + " ");
+            swRider.Write(ridersLocations[i, 0] + " " + ridersLocations[i, 1]);
+            swRider.WriteLine();
+        }
+        swRider.Close();
+
+        StreamWriter swPd = new StreamWriter($"locationsPd{run}.csv");
+        swPd.Write(map.Reverse[0] + " ");
+        swPd.Write(pdLocations[0, 0] + " " + pdLocations[0, 1]);
+        swPd.WriteLine();
+
+
+        for (int i = 1; i < pdLocations.GetLength(0); i++)
+        {
+            swPd.Write(map.Reverse[i + rider] + " ");
+            swPd.Write(pdLocations[i, 0] + " " + pdLocations[i, 1]);
+            swPd.WriteLine();
+
+        }
+        swPd.Close();
+
     }
 
 
@@ -539,7 +557,7 @@ public class VrpPickupDelivery
 
         // Get PickUps and Deliveries informations
         BiMap<string, int> map = new BiMap<string, int>() { };
-        int VehicleNumber = 0;
+        int vehicleNumber = 0;
         List<long> demands = new List<long>();
         long[,] locations = { };
         long[,] tw = { };
@@ -547,7 +565,7 @@ public class VrpPickupDelivery
         BiMap<string, string> Pd_map = new BiMap<string, string>() { };
 
 
-        ReadStandardInput(standardInput, ref VehicleNumber, ref demands,
+        ReadStandardInput(standardInput, ref vehicleNumber, ref demands,
                           ref locations, ref tw, ref Pd, ref map);
 
         foreach (var pair in Pd)
@@ -563,18 +581,20 @@ public class VrpPickupDelivery
         List<int> cost = new List<int>();
 
         ReadRiderInput(riderInput, ref cap_rider, ref locations_rider, ref tw_rider,
-                       ref speed, ref cost, VehicleNumber);
+                       ref speed, ref cost, vehicleNumber);
 
-        long[] cargo = new long[VehicleNumber];
+        SaveWorldLocations(locations_rider, locations, map, 0);
+
+        long[] cargo = new long[vehicleNumber];
 
         // Build data model
         DataModel data = BuildDataModel(locations_rider, locations, tw_rider, tw, demands, cap_rider,
-                                        Pd, map, speed, cost, cargo, VehicleNumber);
+                                        Pd, map, speed, cost, cargo, vehicleNumber);
 
 
         // Create Routing Index Manager
         RoutingIndexManager manager =
-            new RoutingIndexManager(data.Locations.GetLength(0), data.VehicleNumber, data.Starts, data.Ends);
+            new RoutingIndexManager(data.Locations.GetLength(0), data.vehicleNumber, data.Starts, data.Ends);
 
         long[,] distanceMatrix = ComputeEuclideanDistanceMatrix(data.Locations);
 
@@ -586,16 +606,15 @@ public class VrpPickupDelivery
         Assignment solution = routing.SolveWithParameters(searchParameters);
 
 
-
-        List<List<Tuple<string, long, long>>> solution_map = PrintSolution(data, routing, manager, solution, map);
+        List<List<Tuple<string, long, long>>> solution_map = PrintSolution(data, routing, manager, solution, map, 0);
         BiMap<string, int> map_new = new BiMap<string, int>() { };
 
-        List<int> present = new List<int> { 3, 2 };
+        List<int> present = new List<int> { 2, 2 };
 
-        long[,] locations_rider_new = new long[data.VehicleNumber, 2];
-        long[,] tw_rider_new = new long[data.VehicleNumber, 2];
+        long[,] locations_rider_new = new long[data.vehicleNumber, 2];
+        long[,] tw_rider_new = new long[data.vehicleNumber, 2];
 
-        long[] cargo_new = new long[data.VehicleNumber];
+        long[] cargo_new = new long[data.vehicleNumber];
 
         for (int i = 0; i < solution_map.Count; i++)
         {
@@ -659,7 +678,7 @@ public class VrpPickupDelivery
                     tw_new[n_loc, 0] = data.TimeWindows[map.Forward[node], 0];
                     tw_new[n_loc, 1] = data.TimeWindows[map.Forward[node], 1];
                     demands_new.Add(data.Demands[map.Forward[node]]);
-                    map_new.Add(node, n_loc + data.VehicleNumber);
+                    map_new.Add(node, n_loc + data.vehicleNumber);
                     n_loc++;
                     single_delivery.Add(node);
                 }
@@ -671,14 +690,14 @@ public class VrpPickupDelivery
                     tw_new[n_loc, 0] = data.TimeWindows[map.Forward[pickup_node], 0];
                     tw_new[n_loc, 1] = data.TimeWindows[map.Forward[pickup_node], 1];
                     demands_new.Add(data.Demands[map.Forward[pickup_node]]);
-                    map_new.Add(pickup_node, n_loc + data.VehicleNumber);
+                    map_new.Add(pickup_node, n_loc + data.vehicleNumber);
                     n_loc++;
                     locations_new[n_loc, 0] = data.Locations[map.Forward[node], 0];
                     locations_new[n_loc, 1] = data.Locations[map.Forward[node], 1];
                     tw_new[n_loc, 0] = data.TimeWindows[map.Forward[node], 0];
                     tw_new[n_loc, 1] = data.TimeWindows[map.Forward[node], 1];
                     demands_new.Add(data.Demands[map.Forward[node]]);
-                    map_new.Add(node, n_loc + data.VehicleNumber);
+                    map_new.Add(node, n_loc + data.vehicleNumber);
                     n_loc++;
                     pick_delivery_constraint.Add(Tuple.Create(pickup_node, node));
                     Pd_new.Add(Tuple.Create(pickup_node, node));
@@ -690,28 +709,28 @@ public class VrpPickupDelivery
         }
 
         locations_new[n_loc, 0] = 1;
-        locations_new[n_loc, 1] = 5;
-        tw_new[n_loc, 0] = 5;
+        locations_new[n_loc, 1] = 50;
+        tw_new[n_loc, 0] = 40;
         tw_new[n_loc, 1] = 1000;
         demands_new.Add(10);
-        map_new.Add("nodeD", n_loc + data.VehicleNumber);
+        map_new.Add("nodeD", n_loc + data.vehicleNumber);
         n_loc++;
         locations_new[n_loc, 0] = 1;
-        locations_new[n_loc, 1] = 8;
-        tw_new[n_loc, 0] = 35;
-        tw_new[n_loc, 1] = 100;
+        locations_new[n_loc, 1] = 80;
+        tw_new[n_loc, 0] = 80;
+        tw_new[n_loc, 1] = 800;
         demands_new.Add(-10);
-        map_new.Add("nodeDD", n_loc + data.VehicleNumber);
+        map_new.Add("nodeDD", n_loc + data.vehicleNumber);
         n_loc++;
 
         Pd_new.Add(Tuple.Create("nodeD", "nodeDD"));
-
+        SaveWorldLocations(locations_rider_new, locations_new, map_new, 1);
         data = BuildDataModel(locations_rider_new, locations_new, tw_rider_new, tw_new, demands_new, cap_rider,
-                                    Pd_new, map_new, speed, cost, cargo_new, VehicleNumber);
+                                    Pd_new, map_new, speed, cost, cargo_new, vehicleNumber);
 
         // Create Routing Index Manager
         manager =
-            new RoutingIndexManager(data.Locations.GetLength(0), data.VehicleNumber, data.Starts, data.Ends);
+            new RoutingIndexManager(data.Locations.GetLength(0), data.vehicleNumber, data.Starts, data.Ends);
 
         distanceMatrix = ComputeEuclideanDistanceMatrix(data.Locations);
 
@@ -726,7 +745,7 @@ public class VrpPickupDelivery
         // Solve the problem.
         solution = routing.SolveWithParameters(searchParameters);
         // Print solution on console.
-        solution_map = PrintSolution(data, routing, manager, solution, map_new);
+        solution_map = PrintSolution(data, routing, manager, solution, map_new, 1);
 
     }
 }
