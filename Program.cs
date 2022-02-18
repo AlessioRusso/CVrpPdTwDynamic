@@ -456,7 +456,7 @@ public class VrpPickupDelivery
             {
                 foreach (var tuple in pd_constraints[i])
                 {
-                    routing.VehicleVar(manager.NodeToIndex(map.Forward[tuple.Item1])).SetValue(i);
+                   routing.VehicleVar(manager.NodeToIndex(map.Forward[tuple.Item1])).SetValue(i);
                 }
             }
         }
@@ -506,6 +506,14 @@ public class VrpPickupDelivery
 
         return true;
     }
+
+
+    static bool isPresentPickUp(string node, List<Tuple<string, long, long>> route,
+                                int present)
+    {
+        return route[present].Item1.Equals(node);
+    }
+
     static void SaveWorldLocations(long[,] ridersLocations,
                                    long[,] pdLocations,
                                    BiMap<string, int> map,
@@ -609,7 +617,7 @@ public class VrpPickupDelivery
         List<List<Tuple<string, long, long>>> solution_map = PrintSolution(data, routing, manager, solution, map, 0);
         BiMap<string, int> map_new = new BiMap<string, int>() { };
 
-        List<int> present = new List<int> { 2, 2 };
+        List<int> present = new List<int> { 0, 0 };
 
         long[,] locations_rider_new = new long[data.vehicleNumber, 2];
         long[,] tw_rider_new = new long[data.vehicleNumber, 2];
@@ -633,7 +641,6 @@ public class VrpPickupDelivery
             for (int j = 1; j < solution_map[i].Count & j < present[i]; j++)
             {
                 actualCargo += data.Demands[map.Forward[solution_map[i][j].Item1]];
-
             }
             cargo_new[i] = actualCargo;
         }
@@ -644,8 +651,9 @@ public class VrpPickupDelivery
             if (present[i] != 0)
                 past += present[i] - 1;
         }
+        
 
-        int new_loc = 2;
+        int new_loc = 0;
         List<long> demands_new = new List<long>();
         long[,] locations_new = new long[locations.GetLength(0) - past + new_loc, 2];
         long[,] tw_new = new long[locations.GetLength(0) - past + new_loc, 2];
@@ -699,7 +707,9 @@ public class VrpPickupDelivery
                     demands_new.Add(data.Demands[map.Forward[node]]);
                     map_new.Add(node, n_loc + data.vehicleNumber);
                     n_loc++;
-                    pick_delivery_constraint.Add(Tuple.Create(pickup_node, node));
+                    if (isPresentPickUp(pickup_node, solution_map[i], present[i])){
+                        pick_delivery_constraint.Add(Tuple.Create(pickup_node, node));
+                    }
                     Pd_new.Add(Tuple.Create(pickup_node, node));
                 }
 
@@ -707,7 +717,7 @@ public class VrpPickupDelivery
             started_deliveries.Add(single_delivery);
             pd_constraints.Add(pick_delivery_constraint);
         }
-
+/*
         locations_new[n_loc, 0] = 1;
         locations_new[n_loc, 1] = 50;
         tw_new[n_loc, 0] = 40;
@@ -724,6 +734,7 @@ public class VrpPickupDelivery
         n_loc++;
 
         Pd_new.Add(Tuple.Create("nodeD", "nodeDD"));
+*/
         SaveWorldLocations(locations_rider_new, locations_new, map_new, 1);
         data = BuildDataModel(locations_rider_new, locations_new, tw_rider_new, tw_new, demands_new, cap_rider,
                                     Pd_new, map_new, speed, cost, cargo_new, vehicleNumber);
