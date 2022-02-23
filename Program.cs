@@ -363,7 +363,7 @@ public class VrpPickupDelivery
                 }
                 for (int z = 0; z < data.PickupsDeliveries.Count(); z++)
                 {
-
+                    // Double pickup in same node
                     if (fromNode == data.PickupsDeliveries[z][0] & distanceMatrix[fromNode, toNode] == 0)
                     {
                         //Console.WriteLine("{0}->{1}={2}", fromNode, toNode, (int)((distanceMatrix[fromNode, toNode] * data.vehicleCost[j])/data.vehicleSpeed[j]) + data.pick_service_time);
