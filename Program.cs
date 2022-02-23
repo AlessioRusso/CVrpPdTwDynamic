@@ -633,6 +633,7 @@ public class VrpPickupDelivery
         for (int i = 0; i < solution_map.Count; i++)
         {
             var toIndex = map.Forward[solution_map[i][present[i]].Item1];
+            // idle state
             if (toIndex == 0)
             {
                 var prevIndex = map.Forward[solution_map[i][present[i] - 1].Item1];
