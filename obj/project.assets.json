@@ -18,6 +18,8 @@
         "type": "package",
         "dependencies": {
           "Google.OrTools.runtime.linux-x64": "9.2.9972",
+          "Google.OrTools.runtime.osx-x64": "9.2.9972",
+          "Google.OrTools.runtime.win-x64": "9.2.9972",
           "Google.Protobuf": "3.19.1"
         },
         "compile": {
@@ -37,6 +39,28 @@
           "runtimes/linux-x64/native/libortools.so": {
             "assetType": "native",
             "rid": "linux-x64"
+          }
+        }
+      },
+      "Google.OrTools.runtime.osx-x64/9.2.9972": {
+        "type": "package",
+        "runtimeTargets": {
+          "runtimes/osx-x64/native/google-ortools-native.dylib": {
+            "assetType": "native",
+            "rid": "osx-x64"
+          },
+          "runtimes/osx-x64/native/libortools.dylib": {
+            "assetType": "native",
+            "rid": "osx-x64"
+          }
+        }
+      },
+      "Google.OrTools.runtime.win-x64/9.2.9972": {
+        "type": "package",
+        "runtimeTargets": {
+          "runtimes/win-x64/native/google-ortools-native.dll": {
+            "assetType": "native",
+            "rid": "win-x64"
           }
         }
       },
@@ -1253,11 +1277,12 @@
       ]
     },
     "Google.OrTools/9.2.9972": {
-      "sha512": "zKFLcPr+Zv58YmsyiQjfCEFGBQL7SB7/i/i97AUENHptNVEbIP4xMVBCoJ0Rbw8MMICC7eMbxXQeKFg3icQ1mg==",
+      "sha512": "3bJN7Ip6VZiBErvOazzj3tNhho7f7wRWjdQqPftpqs1bMfgzrJpj1CFMRdX1nQe2U2DOJEiTfT2kwbRqjbV++A==",
       "type": "package",
       "path": "google.ortools/9.2.9972",
       "files": [
         ".nupkg.metadata",
+        ".signature.p7s",
         "content/bop/bop_parameters.proto",
         "content/constraint_solver/assignment.proto",
         "content/constraint_solver/demon_profiler.proto",
@@ -1277,6 +1302,8 @@
         "content/util/optional_boolean.proto",
         "google.ortools.9.2.9972.nupkg.sha512",
         "google.ortools.nuspec",
+        "lib/net452/Google.OrTools.dll",
+        "lib/net452/Google.OrTools.xml",
         "lib/net6.0/Google.OrTools.dll",
         "lib/net6.0/Google.OrTools.xml",
         "lib/netcoreapp3.1/Google.OrTools.dll",
@@ -1284,16 +1311,44 @@
       ]
     },
     "Google.OrTools.runtime.linux-x64/9.2.9972": {
-      "sha512": "fTesucAQnWO01vy5hx8HBprzLPmQcnlPd2E2pCpBwMz+tdBR+I5DZbx7NUGOfbU9/fwv8R46BCOSN9tnp8KueA==",
+      "sha512": "EbPDqbyF8/RhAcg1ytJntQh0FQQoH4ZkRJxXp7A3mmzPnQNOdyP0Z1wUOyZCHsYyCanFHhq/tz3MeT6o80nMCQ==",
       "type": "package",
       "path": "google.ortools.runtime.linux-x64/9.2.9972",
       "files": [
         ".nupkg.metadata",
+        ".signature.p7s",
         "content/orLogo.png",
         "google.ortools.runtime.linux-x64.9.2.9972.nupkg.sha512",
         "google.ortools.runtime.linux-x64.nuspec",
         "runtimes/linux-x64/native/google-ortools-native.so",
         "runtimes/linux-x64/native/libortools.so"
+      ]
+    },
+    "Google.OrTools.runtime.osx-x64/9.2.9972": {
+      "sha512": "Af+FzsP9cx1S4/3QHexWN0Af7R7566ntKzpiqFbHkzWPf5YMsBKwvaWugaXdDfcCawNDmADIdy7kepx62kIsAw==",
+      "type": "package",
+      "path": "google.ortools.runtime.osx-x64/9.2.9972",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "content/orLogo.png",
+        "google.ortools.runtime.osx-x64.9.2.9972.nupkg.sha512",
+        "google.ortools.runtime.osx-x64.nuspec",
+        "runtimes/osx-x64/native/google-ortools-native.dylib",
+        "runtimes/osx-x64/native/libortools.dylib"
+      ]
+    },
+    "Google.OrTools.runtime.win-x64/9.2.9972": {
+      "sha512": "fAawZP9yUT41LchbZ6r46nSpRNRMU744PSuoFA8vS4HpOMj07URMAH04sCE409cBKLZTvlsVoNjEYcXj/PRB/w==",
+      "type": "package",
+      "path": "google.ortools.runtime.win-x64/9.2.9972",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "content/orLogo.png",
+        "google.ortools.runtime.win-x64.9.2.9972.nupkg.sha512",
+        "google.ortools.runtime.win-x64.nuspec",
+        "runtimes/win-x64/native/google-ortools-native.dll"
       ]
     },
     "Google.Protobuf/3.19.1": {
@@ -4596,19 +4651,19 @@
     ]
   },
   "packageFolders": {
-    "/home/alessio/.nuget/packages/": {}
+    "C:\\Users\\Alessio\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/alessio/Desktop/CVrpPdTwDynamic/dynamic.csproj",
+      "projectUniqueName": "C:\\Users\\Alessio\\Desktop\\CVrpPdTwDynamic\\dynamic.csproj",
       "projectName": "dynamic",
-      "projectPath": "/home/alessio/Desktop/CVrpPdTwDynamic/dynamic.csproj",
-      "packagesPath": "/home/alessio/.nuget/packages/",
-      "outputPath": "/home/alessio/Desktop/CVrpPdTwDynamic/obj/",
+      "projectPath": "C:\\Users\\Alessio\\Desktop\\CVrpPdTwDynamic\\dynamic.csproj",
+      "packagesPath": "C:\\Users\\Alessio\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Alessio\\Desktop\\CVrpPdTwDynamic\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "/home/alessio/.nuget/NuGet/NuGet.Config"
+        "C:\\Users\\Alessio\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net6.0"
@@ -4656,7 +4711,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/6.0.101/RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.200\\RuntimeIdentifierGraph.json"
       }
     }
   }

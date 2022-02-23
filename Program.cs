@@ -1,558 +1,13 @@
 ﻿using Google.OrTools.ConstraintSolver;
 using Google.Protobuf.WellKnownTypes;
 using BidirectionalMap;
+using CVrpPdTwDynamic.Models;
+using CVrpPdTwDynamic.Utils;
+using CVrpPdTwDynamic.Checker;
 
 
 public class VrpPickupDelivery
 {
-    class DataModel
-    {
-        public int vehicleNumber { get; private set; }
-        public long[] vehicleCapacities { get; private set; }
-        public long[] Cargo { get; private set; }
-        public long[] Demands { get; private set; }
-        public int[] vehicleCost { get; private set; }
-        public int[] vehicleSpeed { get; private set; }
-        public long[,] Locations { get; private set; }
-        public long[,] TimeWindows { get; private set; }
-        public int[][] PickupsDeliveries { get; private set; }
-        public int Depot = 0;
-        public int pick_service_time = 2;
-        public int delivery_service_time = 1;
-        public int[] Starts = { };
-        public int[] Ends = { };
-
-        public DataModel(int n, List<long> cap, List<long> dem, long[,] loc,
-                        long[,] tw, int[][] pickDel, List<int> starts, List<int> ends,
-                        List<int> speed, List<int> cost, long[] cargo)
-        {
-            this.vehicleNumber = n;
-            Starts = starts.ToArray();
-            Ends = ends.ToArray();
-            vehicleCapacities = cap.ToArray();
-            Demands = dem.ToArray();
-            Locations = loc;
-            TimeWindows = tw;
-            PickupsDeliveries = pickDel;
-            vehicleCost = new int[this.vehicleNumber];
-            vehicleSpeed = new int[this.vehicleNumber];
-            for (int i = 0; i < this.vehicleNumber; i++)
-            {
-                vehicleCost[i] = cost[i];
-                vehicleSpeed[i] = speed[i];
-            }
-            Cargo = cargo;
-        }
-    };
-
-    static long[,] ComputeEuclideanDistanceMatrix(in long[,] locations)
-    {
-        // Calculate the distance matrix using Euclidean distance.
-        int locationNumber = locations.GetLength(0);
-        long[,] distanceMatrix = new long[locationNumber, locationNumber];
-        for (int fromNode = 0; fromNode < locationNumber; fromNode++)
-        {
-            for (int toNode = 0; toNode < locationNumber; toNode++)
-            {
-                if (fromNode == toNode)
-                    distanceMatrix[fromNode, toNode] = 0;
-                else
-                    distanceMatrix[fromNode, toNode] =
-                        (long)Math.Sqrt(Math.Pow(locations[toNode, 0] - locations[fromNode, 0], 2) +
-                                        Math.Pow(locations[toNode, 1] - locations[fromNode, 1], 2));
-            }
-        }
-        return distanceMatrix;
-    }
-
-
-
-    static List<List<Tuple<string, long, long>>> PrintSolution(in DataModel data, in RoutingModel routing, in RoutingIndexManager manager,
-                            in Assignment solution, in BiMap<string, int> map, int run)
-    {
-        List<List<Tuple<string, long, long>>> solution_map = new List<List<Tuple<string, long, long>>>() { };
-        Console.WriteLine($"Objective {solution.ObjectiveValue()}:");
-        StreamWriter sw = new StreamWriter($"solution{run}.csv");
-        RoutingDimension timeDimension = routing.GetMutableDimension("Time");
-        long totalTime = 0;
-        for (int i = 0; i < data.vehicleNumber; ++i)
-        {
-            List<Tuple<string, long, long>> solution_map_rider = new List<Tuple<string, long, long>>() { };
-            Console.WriteLine();
-            var index = routing.Start(i);
-            while (routing.IsEnd(index) == false)
-            {
-                var timeVar = timeDimension.CumulVar(index);
-                var node = map.Reverse[manager.IndexToNode(index)];
-                solution_map_rider.Add(Tuple.Create(node, solution.Min(timeVar), solution.Max(timeVar)));
-                Console.Write($"{node} Time ({solution.Min(timeVar)},{solution.Max(timeVar)}) -> ");
-                sw.Write(node + " ");
-                sw.Write(solution.Min(timeVar).ToString() + " ");
-                sw.Write(solution.Max(timeVar).ToString() + " ");
-                index = solution.Value(routing.NextVar(index));
-            }
-            var endTimeVar = timeDimension.CumulVar(index);
-
-            solution_map_rider.Add(Tuple.Create(map.Reverse[manager.IndexToNode(index)], solution.Min(endTimeVar), solution.Max(endTimeVar)));
-
-            Console.WriteLine($"{map.Reverse[manager.IndexToNode(index)]} Time({solution.Min(endTimeVar)},{ solution.Max(endTimeVar)})");
-            Console.WriteLine("Time of the route: {0}", solution.Min(endTimeVar));
-            totalTime += solution.Min(endTimeVar);
-            sw.Write(map.Reverse[manager.IndexToNode(index)]);
-            sw.WriteLine();
-            solution_map.Add(solution_map_rider);
-        }
-        Console.WriteLine("------------------------------------------------");
-
-        sw.Close();
-        return solution_map;
-    }
-
-
-
-    static string[] SplitInput(StreamReader input)
-    {
-        string? line = input.ReadLine();
-        if (line == null) return new string[0];
-        return line.Split(new[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
-    }
-
-
-    // The input files follow the "Li & Lim" format
-    static void ReadStandardInput(string fileName, ref int n, ref List<long> demands,
-                          ref long[,] Locations, ref long[,] tw, ref List<Tuple<string, string>> Pd,
-                          ref BiMap<string, int> map)
-    {
-
-
-        using (StreamReader input = new StreamReader(fileName))
-        {
-            List<Tuple<int, int>> coordinates = new List<Tuple<int, int>>();
-            List<Tuple<int, int>> times = new List<Tuple<int, int>>();
-
-
-            // read first row
-            string[] splitted;
-            splitted = SplitInput(input);
-            n = int.Parse(splitted[0]);
-
-            // add riders to map 
-            for (int i = 0; i < n; i++)
-            {
-                map.Add($"rider{i + 1}", i + 1);
-            }
-
-            // read depot information
-            splitted = SplitInput(input);
-            map.Add(splitted[0], 0);
-
-            int depotX = int.Parse(splitted[1]);
-            int depotY = int.Parse(splitted[2]);
-
-            int ready_depot = int.Parse(splitted[4]);
-            int due_depot = int.Parse(splitted[5]);
-            demands.Add(0);
-
-            // start reading locations
-            int n_loc = 1;
-            while (!input.EndOfStream)
-            {
-                splitted = SplitInput(input);
-
-                if (splitted.Length < 9) break;
-                map.Add(splitted[0], n + n_loc);
-                n_loc++;
-                coordinates.Add(new Tuple<int, int>(int.Parse(splitted[1]), int.Parse(splitted[2])));
-                demands.Add(int.Parse(splitted[3]));
-                times.Add(new Tuple<int, int>(int.Parse(splitted[4]), int.Parse(splitted[5])));
-                if (splitted[7] == "-")
-                {
-                    Pd.Add(new Tuple<string, string>(splitted[0], splitted[8]));
-                }
-            }
-
-            // initialize time windows and locations
-            int n_nodes = coordinates.Count;
-            Locations = new long[n_nodes + 1, 2];
-            tw = new long[n_nodes + 1, 2];
-            Locations[0, 0] = depotX;
-            Locations[0, 1] = depotY;
-            tw[0, 0] = ready_depot;
-            tw[0, 1] = due_depot;
-            int j = 0;
-
-            // build locations 
-            foreach (var pair in coordinates)
-            {
-                Locations[j + 1, 0] = pair.Item1;
-                Locations[j + 1, 1] = pair.Item2;
-                j++;
-            }
-
-            // build time windows
-            j = 0;
-            foreach (var pair in times)
-            {
-                tw[j + 1, 0] = pair.Item1;
-                tw[j + 1, 1] = pair.Item2;
-                j++;
-            }
-
-        }
-    }
-
-    // The input files follow the "Li & Lim" format
-    static void ReadRiderInput(string fileName, ref List<long> cap_rider,
-                          ref long[,] Locations_riders, ref long[,] tw_rider,
-                          ref List<int> speed, ref List<int> cost, int vehicleNumber)
-    {
-        if (fileName == "")
-        {
-            return;
-        }
-
-        using (StreamReader input = new StreamReader(fileName))
-        {
-
-            string[] splitted;
-            Locations_riders = new long[vehicleNumber, 2];
-            tw_rider = new long[vehicleNumber, 2];
-            int i = 0;
-
-            while (!input.EndOfStream)
-            {
-                splitted = SplitInput(input);
-
-                if (splitted.Length < 7) break;
-
-                Locations_riders[i, 0] = int.Parse(splitted[1]);
-                Locations_riders[i, 1] = int.Parse(splitted[2]);
-
-                cap_rider.Add(int.Parse(splitted[5]));
-                tw_rider[i, 0] = int.Parse(splitted[3]);
-                tw_rider[i, 1] = int.Parse(splitted[4]);
-                speed.Add(int.Parse(splitted[6]));
-                cost.Add(int.Parse(splitted[7]));
-                i = i + 1;
-            }
-        }
-    }
-
-    static DataModel BuildDataModel(long[,] locations_rider, long[,] locations, long[,] tw_rider,
-                               long[,] tw, List<long> demands, List<long> cap_rider,
-                               List<Tuple<string, string>> Pd,
-                               BiMap<string, int> map,
-                               List<int> speed,
-                               List<int> cost,
-                               long[] cargo,
-                               int vehicleNumber
-    )
-
-    {
-        List<long> new_demands = new List<long>();
-        long[,] new_locations = new long[locations_rider.GetLength(0) + locations.GetLength(0), 2];
-        long[,] new_tw = new long[tw_rider.GetLength(0) + tw.GetLength(0), 2];
-
-
-        List<int> starts = new List<int>();
-        List<int> ends = new List<int>();
-
-        for (int i = 0; i < vehicleNumber; i++)
-        {
-            starts.Add(i + 1);
-            ends.Add(0);
-        }
-
-        // depot 
-        new_locations[0, 0] = locations[0, 0];
-        new_locations[0, 1] = locations[0, 1];
-        new_tw[0, 0] = tw[0, 0];
-        new_tw[0, 1] = tw[0, 1];
-
-        for (int i = 0; i < locations_rider.GetLength(0); i++)
-        {
-            new_locations[i + 1, 0] = locations_rider[i, 0];
-            new_locations[i + 1, 1] = locations_rider[i, 1];
-            new_tw[i + 1, 0] = tw_rider[i, 0];
-            new_tw[i + 1, 1] = tw_rider[i, 1];
-        }
-        int j = locations_rider.GetLength(0);
-        for (int i = 1; i < locations.GetLength(0); i++)
-        {
-            if (locations[i, 0] != 0 & locations[i, 1] != 0)
-            {
-                new_locations[i + j, 0] = locations[i, 0];
-                new_locations[i + j, 1] = locations[i, 1];
-                new_tw[i + j, 0] = tw[i, 0];
-                new_tw[i + j, 1] = tw[i, 1];
-            }
-        }
-
-        // add demand rider
-        for (int i = 0; i < vehicleNumber; i++)
-        {
-            new_demands.Add(0);
-        }
-
-        // add demans depot + locations
-        foreach (var d in demands)
-            new_demands.Add(d);
-
-        int[][] mapped_pd = new int[Pd.Count][];
-        int n_pair = 0;
-        foreach (var pair in Pd)
-        {
-            mapped_pd[n_pair] = new int[] { map.Forward[pair.Item1], map.Forward[pair.Item2] };
-            n_pair++;
-        }
-
-        // First Run
-        return new DataModel(vehicleNumber, cap_rider, new_demands, new_locations, new_tw, mapped_pd, starts, ends, speed, cost, cargo);
-    }
-
-    static RoutingModel CreateRoutingModel(RoutingIndexManager manager,
-                                           DataModel data,
-                                           long[,] distanceMatrix,
-                                           List<List<string>> started_deliveries,
-                                           List<List<Tuple<string, string>>> pd_constraints,
-                                           BiMap<string, int> map
-                                           )
-    {
-
-        RoutingModel routing = new RoutingModel(manager);
-
-
-        // Capacity Constraints.
-        int demandCallbackIndex = routing.RegisterUnaryTransitCallback((long fromIndex) =>
-        {
-            // Convert from routing variable Index to demand NodeIndex.
-            var fromNode = manager.IndexToNode(fromIndex);
-            return data.Demands[fromNode];
-        });
-
-        routing.AddDimensionWithVehicleCapacity(demandCallbackIndex, 0, // null capacity slack
-                                                data.vehicleCapacities, // vehicle maximum capacities
-                                                false,                   // start cumul to zero
-                                                "Capacity");
-
-        var capacityDimension = routing.GetDimensionOrDie("Capacity");
-
-
-        for (int i = 0; i < data.vehicleNumber; i++)
-        {
-            var index = routing.Start(i);
-            capacityDimension.CumulVar(index).SetValue(data.Cargo[i]);
-        }
-
-        int[] transitCallbackIndexAll = new int[data.vehicleNumber];
-        //populate each vehicle's transitcallback
-        for (int i = 0; i < data.vehicleNumber; ++i)
-        {
-            int j = i;
-
-            transitCallbackIndexAll[i] = routing.RegisterTransitCallback(
-            (long fromIndex, long toIndex) =>
-            {
-
-                // Convert from routing variable Index to time matrix NodeIndex.
-                var fromNode = manager.IndexToNode(fromIndex);
-                var toNode = manager.IndexToNode(toIndex);
-                if (toNode == 0)
-                {
-                    return 0;
-                }
-                for (int z = 0; z < data.PickupsDeliveries.Count(); z++)
-                {
-                    // Double pickup in same node
-                    if (fromNode == data.PickupsDeliveries[z][0] & distanceMatrix[fromNode, toNode] == 0)
-                    {
-                        //Console.WriteLine("{0}->{1}={2}", fromNode, toNode, (int)((distanceMatrix[fromNode, toNode] * data.vehicleCost[j])/data.vehicleSpeed[j]) + data.pick_service_time);
-
-                        return (long)((distanceMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j]);
-                    }
-
-                    if (fromNode == data.PickupsDeliveries[z][0])
-                    {
-                        //Console.WriteLine("{0}->{1}={2}", fromNode, toNode, (int)((distanceMatrix[fromNode, toNode] * data.vehicleCost[j])/data.vehicleSpeed[j]) + data.pick_service_time);
-                        return (long)((distanceMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j])
-                                    + data.pick_service_time;
-                    }
-                    if (fromNode == data.PickupsDeliveries[z][1])
-                    {
-                        //Console.WriteLine("{0}->{1}={2}", fromNode, toNode, (int)((distanceMatrix[fromNode, toNode] * data.vehicleCost[j])/data.vehicleSpeed[j]) + data.pick_service_time);
-                        return (long)((distanceMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j])
-                                    + data.delivery_service_time;
-                    }
-                }
-                return (long)((distanceMatrix[fromNode, toNode]) * data.vehicleCost[j]) / data.vehicleSpeed[j];
-
-            }
-            );
-        }
-
-        for (int i = 0; i < data.vehicleNumber; ++i)
-        {
-            routing.SetArcCostEvaluatorOfVehicle(transitCallbackIndexAll[i], i);
-        };
-
-        routing.AddDimensionWithVehicleTransitAndCapacity(
-            transitCallbackIndexAll,
-            0,   // no slack
-             new long[] { 50000, 50000 },  // vehicle maximum travel time
-            true,  // start cumul to zero
-            "TimeRoute");
-
-
-        RoutingDimension time_routeDimension = routing.GetMutableDimension("TimeRoute");
-        time_routeDimension.SetGlobalSpanCostCoefficient(10);
-
-        routing.AddDimensionWithVehicleTransitAndCapacity(
-            transitCallbackIndexAll,
-            3000,   // no slack
-            new long[] { 50000, 50000 },  // vehicle maximum travel time
-            false,  // start cumul to zero
-            "Time");
-
-        RoutingDimension timeDimension = routing.GetMutableDimension("Time");
-
-        // Add time window constraints for each location except depot.
-        int tw_init = data.vehicleNumber + 1;
-
-        for (int i = tw_init; i < data.TimeWindows.GetLength(0); ++i)
-        {
-            long index = manager.NodeToIndex(i);
-            timeDimension.CumulVar(index).SetRange(data.TimeWindows[i, 0], data.TimeWindows[i, 1]);
-            timeDimension.SetCumulVarSoftUpperBound(index, data.TimeWindows[i, 0], 1000000000);
-        }
-        // Add time window constraints for each vehicle start node.
-        for (int i = 0; i < data.vehicleNumber; ++i)
-        {
-            long index = routing.Start(i);
-            timeDimension.CumulVar(index).SetRange(data.TimeWindows[i + 1, 0], data.TimeWindows[i + 1, 1]);
-        }
-
-        Solver solver = routing.solver();
-        for (int i = 0; i < data.PickupsDeliveries.GetLength(0); i++)
-        {
-            long pickupIndex = manager.NodeToIndex(data.PickupsDeliveries[i][0]);
-            long deliveryIndex = manager.NodeToIndex(data.PickupsDeliveries[i][1]);
-            routing.AddPickupAndDelivery(pickupIndex, deliveryIndex);
-            solver.Add(solver.MakeEquality(routing.VehicleVar(pickupIndex), routing.VehicleVar(deliveryIndex)));
-            solver.Add(solver.MakeLessOrEqual(timeDimension.CumulVar(pickupIndex),
-                                              timeDimension.CumulVar(deliveryIndex)));
-            routing.AddVariableMinimizedByFinalizer(timeDimension.CumulVar(deliveryIndex));
-        }
-
-
-
-        if (started_deliveries != null)
-        {
-            for (int i = 0; i < started_deliveries.Count; i++)
-            {
-                for (int j = 0; j < started_deliveries[i].Count; j++)
-                {
-                    routing.VehicleVar(manager.NodeToIndex(map.Forward[started_deliveries[i][j]])).SetValue(i);
-                }
-            }
-        }
-
-        if (pd_constraints != null)
-        {
-            for (int i = 0; i < pd_constraints.Count; i++)
-            {
-                foreach (var tuple in pd_constraints[i])
-                {
-                    routing.VehicleVar(manager.NodeToIndex(map.Forward[tuple.Item1])).SetValue(i);
-                }
-            }
-        }
-
-        return routing;
-    }
-
-
-    static bool isDeliveryIsPastPickUp(string node, List<Tuple<string, long, long>> route,
-                                    BiMap<string, string> Pd_map, int present)
-    {
-        string? pick = null;
-        try
-        {
-            pick = Pd_map.Reverse[node];
-        }
-        catch { }
-        if (pick == null) return false;
-        for (int i = 0; i < route.Count; i++)
-        {
-            if (route[i].Item1.Equals(pick) & i >= present)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    static bool isDeliveryIsFuturePickUp(string node, List<Tuple<string, long, long>> route,
-                                BiMap<string, string> Pd_map, int present)
-    {
-        string? pick = null;
-        try
-        {
-            pick = Pd_map.Reverse[node];
-        }
-        catch { }
-        if (pick == null) return false;
-        for (int i = 0; i < route.Count; i++)
-        {
-            if (route[i].Item1.Equals(pick) & i < present)
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-
-    static bool isPresentPickUp(string node, List<Tuple<string, long, long>> route,
-                                int present)
-    {
-        return route[present].Item1.Equals(node);
-    }
-
-    static void SaveWorldLocations(long[,] ridersLocations,
-                                   long[,] pdLocations,
-                                   BiMap<string, int> map,
-                                   int run)
-    {
-        StreamWriter swRider = new StreamWriter($"locationsRider{run}.csv");
-        var rider = ridersLocations.GetLength(0);
-        for (int i = 0; i < ridersLocations.GetLength(0); i++)
-        {
-            swRider.Write(map.Reverse[i + 1] + " ");
-            swRider.Write(ridersLocations[i, 0] + " " + ridersLocations[i, 1]);
-            swRider.WriteLine();
-        }
-        swRider.Close();
-
-        StreamWriter swPd = new StreamWriter($"locationsPd{run}.csv");
-        swPd.Write(map.Reverse[0] + " ");
-        swPd.Write(pdLocations[0, 0] + " " + pdLocations[0, 1]);
-        swPd.WriteLine();
-
-
-        for (int i = 1; i < pdLocations.GetLength(0); i++)
-        {
-            swPd.Write(map.Reverse[i + rider] + " ");
-            swPd.Write(pdLocations[i, 0] + " " + pdLocations[i, 1]);
-            swPd.WriteLine();
-
-        }
-        swPd.Close();
-
-    }
-
-
     public static void Main(String[] args)
     {
         string standardInput = "";
@@ -579,7 +34,7 @@ public class VrpPickupDelivery
         BiMap<string, string> Pd_map = new BiMap<string, string>() { };
 
 
-        ReadStandardInput(standardInput, ref vehicleNumber, ref demands,
+        InputReader.ReadStandardInput(standardInput, ref vehicleNumber, ref demands,
                           ref locations, ref tw, ref Pd, ref map);
 
         foreach (var pair in Pd)
@@ -594,15 +49,15 @@ public class VrpPickupDelivery
         List<int> speed = new List<int>();
         List<int> cost = new List<int>();
 
-        ReadRiderInput(riderInput, ref cap_rider, ref locations_rider, ref tw_rider,
+        InputReader.ReadRiderInput(riderInput, ref cap_rider, ref locations_rider, ref tw_rider,
                        ref speed, ref cost, vehicleNumber);
 
-        SaveWorldLocations(locations_rider, locations, map, 0);
+        //InputReader.SaveWorldLocations(locations_rider, locations, map, 0);
 
         long[] cargo = new long[vehicleNumber];
 
         // Build data model
-        DataModel data = BuildDataModel(locations_rider, locations, tw_rider, tw, demands, cap_rider,
+        DataModel data = DataModel.BuildDataModel(locations_rider, locations, tw_rider, tw, demands, cap_rider,
                                         Pd, map, speed, cost, cargo, vehicleNumber);
 
 
@@ -610,9 +65,9 @@ public class VrpPickupDelivery
         RoutingIndexManager manager =
             new RoutingIndexManager(data.Locations.GetLength(0), data.vehicleNumber, data.Starts, data.Ends);
 
-        long[,] distanceMatrix = ComputeEuclideanDistanceMatrix(data.Locations);
+        long[,] distanceMatrix = DistanceMatrix.ComputeEuclideanDistanceMatrix(data.Locations);
 
-        RoutingModel routing = CreateRoutingModel(manager, data, distanceMatrix, null, null, null);
+        RoutingModel routing = Routing.CreateRoutingModel(manager, data, distanceMatrix, null, null, null);
         RoutingSearchParameters searchParameters =
             operations_research_constraint_solver.DefaultRoutingSearchParameters();
         searchParameters.TimeLimit = new Duration { Seconds = 100 };
@@ -620,7 +75,7 @@ public class VrpPickupDelivery
         Assignment solution = routing.SolveWithParameters(searchParameters);
 
 
-        List<List<Tuple<string, long, long>>> solution_map = PrintSolution(data, routing, manager, solution, map, 0);
+        List<List<Tuple<string, long, long>>> solution_map = Solution.PrintSolution(data, routing, manager, solution, map, 0);
         BiMap<string, int> map_new = new BiMap<string, int>() { };
 
         List<int> present = new List<int> { 0, 0 };
@@ -697,7 +152,7 @@ public class VrpPickupDelivery
             for (int j = solution_map[i].Count - 1; j >= present[i]; j--)
             {
                 var node = solution_map[i][j].Item1;
-                if (isDeliveryIsPastPickUp(node, solution_map[i], Pd_map, present[i]))
+                if (CheckOrders.isDeliveryIsPastPickUp(node, solution_map[i], Pd_map, present[i]))
                 {
                     locations_new[n_loc, 0] = data.Locations[map.Forward[node], 0];
                     locations_new[n_loc, 1] = data.Locations[map.Forward[node], 1];
@@ -708,7 +163,7 @@ public class VrpPickupDelivery
                     n_loc++;
                     single_delivery.Add(node);
                 }
-                else if (isDeliveryIsFuturePickUp(node, solution_map[i], Pd_map, present[i]))
+                else if (CheckOrders.isDeliveryIsFuturePickUp(node, solution_map[i], Pd_map, present[i]))
                 {
                     var pickup_node = Pd_map.Reverse[node];
                     locations_new[n_loc, 0] = data.Locations[map.Forward[pickup_node], 0];
@@ -725,7 +180,7 @@ public class VrpPickupDelivery
                     demands_new.Add(data.Demands[map.Forward[node]]);
                     map_new.Add(node, n_loc + data.vehicleNumber);
                     n_loc++;
-                    if (isPresentPickUp(pickup_node, solution_map[i], present[i]))
+                    if (CheckOrders.isPresentPickUp(pickup_node, solution_map[i], present[i]))
                     {
                         pick_delivery_constraint.Add(Tuple.Create(pickup_node, node));
                     }
@@ -754,18 +209,18 @@ public class VrpPickupDelivery
 
         Pd_new.Add(Tuple.Create("nodeD", "nodeDD"));
 
-        SaveWorldLocations(locations_rider_new, locations_new, map_new, 1);
-        data = BuildDataModel(locations_rider_new, locations_new, tw_rider_new, tw_new, demands_new, cap_rider,
+        //InputReader.SaveWorldLocations(locations_rider_new, locations_new, map_new, 1);
+        data = DataModel.BuildDataModel(locations_rider_new, locations_new, tw_rider_new, tw_new, demands_new, cap_rider,
                                     Pd_new, map_new, speed, cost, cargo_new, vehicleNumber);
 
         // Create Routing Index Manager
         manager =
             new RoutingIndexManager(data.Locations.GetLength(0), data.vehicleNumber, data.Starts, data.Ends);
 
-        distanceMatrix = ComputeEuclideanDistanceMatrix(data.Locations);
+        distanceMatrix = DistanceMatrix.ComputeEuclideanDistanceMatrix(data.Locations);
 
         // Create Routing Model.
-        routing = CreateRoutingModel(manager, data, distanceMatrix, started_deliveries, pd_constraints, map_new);
+        routing = Routing.CreateRoutingModel(manager, data, distanceMatrix, started_deliveries, pd_constraints, map_new);
         // Setting first solution heuristic.
         searchParameters =
             operations_research_constraint_solver.DefaultRoutingSearchParameters();
@@ -775,7 +230,7 @@ public class VrpPickupDelivery
         // Solve the problem.
         solution = routing.SolveWithParameters(searchParameters);
         // Print solution on console.
-        solution_map = PrintSolution(data, routing, manager, solution, map_new, 1);
+        solution_map = Solution.PrintSolution(data, routing, manager, solution, map_new, 1);
 
     }
 }

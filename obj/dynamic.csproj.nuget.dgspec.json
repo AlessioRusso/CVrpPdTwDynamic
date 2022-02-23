@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "/home/alessio/Desktop/CVrpPdTwDynamic/dynamic.csproj": {}
+    "C:\\Users\\Alessio\\Desktop\\CVrpPdTwDynamic\\dynamic.csproj": {}
   },
   "projects": {
-    "/home/alessio/Desktop/CVrpPdTwDynamic/dynamic.csproj": {
+    "C:\\Users\\Alessio\\Desktop\\CVrpPdTwDynamic\\dynamic.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/alessio/Desktop/CVrpPdTwDynamic/dynamic.csproj",
+        "projectUniqueName": "C:\\Users\\Alessio\\Desktop\\CVrpPdTwDynamic\\dynamic.csproj",
         "projectName": "dynamic",
-        "projectPath": "/home/alessio/Desktop/CVrpPdTwDynamic/dynamic.csproj",
-        "packagesPath": "/home/alessio/.nuget/packages/",
-        "outputPath": "/home/alessio/Desktop/CVrpPdTwDynamic/obj/",
+        "projectPath": "C:\\Users\\Alessio\\Desktop\\CVrpPdTwDynamic\\dynamic.csproj",
+        "packagesPath": "C:\\Users\\Alessio\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Alessio\\Desktop\\CVrpPdTwDynamic\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/alessio/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\Alessio\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net6.0"
@@ -62,7 +62,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/share/dotnet/sdk/6.0.101/RuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\6.0.200\\RuntimeIdentifierGraph.json"
         }
       }
     }
