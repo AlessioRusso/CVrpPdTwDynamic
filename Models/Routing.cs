@@ -9,7 +9,7 @@ namespace CVrpPdTwDynamic.Models
 
         public static RoutingModel CreateRoutingModel(RoutingIndexManager manager,
                                            DataModel data,
-                                           long[,] distanceMatrix,
+                                           long[,] costMatrix,
                                            List<List<string>> started_deliveries,
                                            List<List<Tuple<string, string>>> pd_constraints,
                                            BiMap<string, int> map
@@ -27,32 +27,56 @@ namespace CVrpPdTwDynamic.Models
                 return data.Demands[fromNode];
             });
 
-            // Monetary Constraints.
-            int monetaryCallbackIndex = routing.RegisterTransitCallback((long fromIndex, long toIndex) =>
+            // Cost.
+
+            int[] costCallbackIndexAll = new int[data.vehicleNumber];
+            for (int i = 0; i < data.vehicleNumber; ++i)
             {
-                // Convert from routing variable Index to demand NodeIndex.
-                var fromNode = manager.IndexToNode(fromIndex);
-                var toNode = manager.IndexToNode(toIndex);
-                for (int i = 0; i < data.PickupsDeliveries.Count(); i++)
+                int j = i;
+                costCallbackIndexAll[i] = routing.RegisterTransitCallback((long fromIndex, long toIndex) =>
                 {
-                    if (fromNode == data.PickupsDeliveries[i][0] && distanceMatrix[fromNode, toNode] > 0)
-                        return DataModel.CostPickup;
-                }
-                return 0;
-            });
+                    var fromNode = manager.IndexToNode(fromIndex);
+                    var toNode = manager.IndexToNode(toIndex);
+                    // to depot
+                    if (toNode == 0)
+                    {
+                        return DataModel.CostDelivery * data.vehicleSpeed[j];
+                    }
 
-            routing.AddDimension(
-                monetaryCallbackIndex,
-                0,   // no slack
-                DataModel.Infinite,  // vehicle maximum travel time
-                true,  // start cumul to zero
-                "MonetaryCost"
-            );
+                    for (int i = 0; i < data.PickupsDeliveries.Count(); i++)
+                    {
+                        // from pickup to somewhere else
+                        if (fromNode == data.PickupsDeliveries[i][0] && costMatrix[fromNode, toNode] > 0)
+                            return (DataModel.CostPickup * data.vehicleSpeed[j]) + costMatrix[fromNode, toNode];
 
-            RoutingDimension monetaryCostDimension = routing.GetMutableDimension("MonetaryCost");
-            // routing.SetArcCostEvaluatorOfAllVehicles(monetaryCallbackIndex);
+                        // from delivery to somewhere else
+                        if (fromNode == data.PickupsDeliveries[i][1] && costMatrix[fromNode, toNode] > 0)
+                            return (DataModel.CostDelivery * data.vehicleSpeed[j]) + costMatrix[fromNode, toNode];
 
-            monetaryCostDimension.SetGlobalSpanCostCoefficient(1);
+                        // from delivery (past pickup) to somewhere else 
+                        for (int z = 0; started_deliveries != null && z < started_deliveries[j].Count; z++)
+                        {
+                            if (fromNode == manager.IndexToNode(map.Forward[started_deliveries[j][z]]) && costMatrix[fromNode, toNode] > 0)
+                                return (DataModel.CostDelivery * data.vehicleSpeed[j]) + costMatrix[fromNode, toNode];
+                        }
+                    }
+                    return costMatrix[fromNode, toNode];
+                });
+            }
+            /*
+                    routing.AddDimensionWithVehicleTransitAndCapacity(
+                            costCallbackIndexAll,
+                            0,   // no slack
+                            new long[] { DataModel.Infinite, DataModel.Infinite },  // vehicle maximum cost
+                            true,  // start cumul to zero
+                            "Cost"
+                    );
+                      var costDimension = routing.GetDimensionOrDie("Cost");
+            */
+            for (int i = 0; i < data.vehicleNumber; ++i)
+            {
+                routing.SetArcCostEvaluatorOfVehicle(costCallbackIndexAll[i], i);
+            };
 
 
             routing.AddDimensionWithVehicleCapacity(demandCallbackIndex, 0, // null capacity slack
@@ -69,13 +93,13 @@ namespace CVrpPdTwDynamic.Models
                 capacityDimension.CumulVar(index).SetValue(data.Cargo[i]);
             }
 
-            int[] transitCallbackIndexAll = new int[data.vehicleNumber];
+            int[] timeCallbackIndexAll = new int[data.vehicleNumber];
             //populate each vehicle's transitcallback
             for (int i = 0; i < data.vehicleNumber; ++i)
             {
                 int j = i;
 
-                transitCallbackIndexAll[i] = routing.RegisterTransitCallback(
+                timeCallbackIndexAll[i] = routing.RegisterTransitCallback(
                 (long fromIndex, long toIndex) =>
                 {
 
@@ -84,53 +108,46 @@ namespace CVrpPdTwDynamic.Models
                     var toNode = manager.IndexToNode(toIndex);
                     if (toNode == 0)
                     {
-                        return 0;
+                        return data.delivery_service_time;
                     }
                     for (int z = 0; z < data.PickupsDeliveries.Count(); z++)
                     {
                         // Double pickup in same node
-                        if (fromNode == data.PickupsDeliveries[z][0] && distanceMatrix[fromNode, toNode] == 0)
+                        if (fromNode == data.PickupsDeliveries[z][0] && costMatrix[fromNode, toNode] == 0)
                         {
-                            return (long)((distanceMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j])
+                            return (long)((costMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j])
                                             + DataModel.ServiceTimeSinglePickup;
                         }
 
                         if (fromNode == data.PickupsDeliveries[z][0])
                         {
-                            return (long)((distanceMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j])
+                            return (long)((costMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j])
                                         + data.pick_service_time;
                         }
                         if (fromNode == data.PickupsDeliveries[z][1])
                         {
-                            return (long)((distanceMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j])
+                            return (long)((costMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j])
                                         + data.delivery_service_time;
                         }
+
+                        // from delivery (past pickup) to somewhere else 
+                        for (int p = 0; started_deliveries != null && p < started_deliveries[j].Count; p++)
+                        {
+                            if (fromNode == manager.IndexToNode(map.Forward[started_deliveries[j][p]]) && costMatrix[fromNode, toNode] > 0)
+                                return (long)((costMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j])
+                                            + data.delivery_service_time;
+                        }
+
+
                     }
-                    return (long)((distanceMatrix[fromNode, toNode]) * data.vehicleCost[j]) / data.vehicleSpeed[j];
+                    return (long)((costMatrix[fromNode, toNode]) * data.vehicleCost[j]) / data.vehicleSpeed[j];
 
                 }
                 );
             }
 
-            for (int i = 0; i < data.vehicleNumber; ++i)
-            {
-                routing.SetArcCostEvaluatorOfVehicle(transitCallbackIndexAll[i], i);
-            };
-
             routing.AddDimensionWithVehicleTransitAndCapacity(
-                transitCallbackIndexAll,
-                0,   // no slack
-                 new long[] { DataModel.Infinite, DataModel.Infinite },  // vehicle maximum travel time
-                true,  // start cumul to zero
-                "TimeRoute");
-
-
-            RoutingDimension time_routeDimension = routing.GetMutableDimension("TimeRoute");
-            time_routeDimension.SetGlobalSpanCostCoefficient(0);
-
-
-            routing.AddDimensionWithVehicleTransitAndCapacity(
-                transitCallbackIndexAll,
+                timeCallbackIndexAll,
                 3000,   // no slack
                 new long[] { DataModel.Infinite, DataModel.Infinite },  // vehicle maximum travel time
                 false,  // start cumul to zero
