@@ -40,6 +40,19 @@ namespace CVrpPdTwDynamic.Models
                 return 0;
             });
 
+            routing.AddDimension(
+                monetaryCallbackIndex,
+                0,   // no slack
+                DataModel.Infinite,  // vehicle maximum travel time
+                true,  // start cumul to zero
+                "MonetaryCost"
+            );
+
+            RoutingDimension monetaryCostDimension = routing.GetMutableDimension("MonetaryCost");
+            // routing.SetArcCostEvaluatorOfAllVehicles(monetaryCallbackIndex);
+
+            monetaryCostDimension.SetGlobalSpanCostCoefficient(1);
+
 
             routing.AddDimensionWithVehicleCapacity(demandCallbackIndex, 0, // null capacity slack
                                                     data.vehicleCapacities, // vehicle maximum capacities
@@ -106,31 +119,19 @@ namespace CVrpPdTwDynamic.Models
             routing.AddDimensionWithVehicleTransitAndCapacity(
                 transitCallbackIndexAll,
                 0,   // no slack
-                 new long[] { 50000, 50000 },  // vehicle maximum travel time
+                 new long[] { DataModel.Infinite, DataModel.Infinite },  // vehicle maximum travel time
                 true,  // start cumul to zero
                 "TimeRoute");
 
 
             RoutingDimension time_routeDimension = routing.GetMutableDimension("TimeRoute");
-            time_routeDimension.SetGlobalSpanCostCoefficient(100);
-
-
-            routing.AddDimension(
-                    monetaryCallbackIndex,
-                    0,   // no slack
-                    50000,  // vehicle maximum travel time
-                    true,  // start cumul to zero
-                    "MonetaryCost"
-            );
-
-            RoutingDimension monetaryCostDimension = routing.GetMutableDimension("MonetaryCost");
-            monetaryCostDimension.SetGlobalSpanCostCoefficient(100);
+            time_routeDimension.SetGlobalSpanCostCoefficient(0);
 
 
             routing.AddDimensionWithVehicleTransitAndCapacity(
                 transitCallbackIndexAll,
                 3000,   // no slack
-                new long[] { 50000, 50000 },  // vehicle maximum travel time
+                new long[] { DataModel.Infinite, DataModel.Infinite },  // vehicle maximum travel time
                 false,  // start cumul to zero
                 "Time");
 
@@ -143,7 +144,7 @@ namespace CVrpPdTwDynamic.Models
             {
                 long index = manager.NodeToIndex(i);
                 timeDimension.CumulVar(index).SetRange(data.TimeWindows[i, 0], data.TimeWindows[i, 1]);
-                timeDimension.SetCumulVarSoftUpperBound(index, data.TimeWindows[i, 0], 100);
+                timeDimension.SetCumulVarSoftUpperBound(index, data.TimeWindows[i, 0], DataModel.Penalty);
             }
             // Add time window constraints for each vehicle start node.
             for (int i = 0; i < data.vehicleNumber; ++i)

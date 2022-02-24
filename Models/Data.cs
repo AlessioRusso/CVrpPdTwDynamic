@@ -13,8 +13,10 @@ namespace CVrpPdTwDynamic.Models
         public long[,] TimeWindows { get; private set; }
         public int[][] PickupsDeliveries { get; private set; }
         public int Depot = 0;
-        public const int CostPickup = 0; // cents
+        public const int CostPickup = 5; // cents
         public const int ServiceTimeSinglePickup = 0;
+        public const int Infinite = 100000000;
+        public const int Penalty = 100;
         public int pick_service_time = 2;
         public int delivery_service_time = 1;
         public int[] Starts = { };
