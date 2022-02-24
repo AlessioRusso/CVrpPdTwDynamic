@@ -6,6 +6,7 @@ namespace CVrpPdTwDynamic.Models
 {
     public class Routing
     {
+
         public static RoutingModel CreateRoutingModel(RoutingIndexManager manager,
                                            DataModel data,
                                            long[,] distanceMatrix,
