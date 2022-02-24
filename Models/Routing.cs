@@ -55,23 +55,14 @@ namespace CVrpPdTwDynamic.Models
                         // from delivery (past pickup) to somewhere else 
                         for (int z = 0; started_deliveries != null && z < started_deliveries[j].Count; z++)
                         {
-                            if (fromNode == manager.IndexToNode(map.Forward[started_deliveries[j][z]]) && costMatrix[fromNode, toNode] > 0)
+                            if (fromNode == map.Forward[started_deliveries[j][z]] && costMatrix[fromNode, toNode] > 0)
                                 return (DataModel.CostDelivery * data.vehicleSpeed[j]) + costMatrix[fromNode, toNode];
                         }
                     }
                     return costMatrix[fromNode, toNode];
                 });
             }
-            /*
-                    routing.AddDimensionWithVehicleTransitAndCapacity(
-                            costCallbackIndexAll,
-                            0,   // no slack
-                            new long[] { DataModel.Infinite, DataModel.Infinite },  // vehicle maximum cost
-                            true,  // start cumul to zero
-                            "Cost"
-                    );
-                      var costDimension = routing.GetDimensionOrDie("Cost");
-            */
+
             for (int i = 0; i < data.vehicleNumber; ++i)
             {
                 routing.SetArcCostEvaluatorOfVehicle(costCallbackIndexAll[i], i);
@@ -132,7 +123,7 @@ namespace CVrpPdTwDynamic.Models
                         // from delivery (past pickup) to somewhere else 
                         for (int p = 0; started_deliveries != null && p < started_deliveries[j].Count; p++)
                         {
-                            if (fromNode == manager.IndexToNode(map.Forward[started_deliveries[j][p]]) && costMatrix[fromNode, toNode] > 0)
+                            if (fromNode == map.Forward[started_deliveries[j][p]] && costMatrix[fromNode, toNode] > 0)
                                 return (long)((costMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j])
                                             + data.delivery_service_time;
                         }
