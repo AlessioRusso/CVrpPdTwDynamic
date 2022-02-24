@@ -2,7 +2,7 @@ using BidirectionalMap;
 
 namespace CVrpPdTwDynamic.Utils
 {
-    public class InputReader
+    public class IOReader
     {
         public static string[] SplitInput(StreamReader input)
         {

@@ -1,5 +1,4 @@
 using Google.OrTools.ConstraintSolver;
-using Google.Protobuf.WellKnownTypes;
 using BidirectionalMap;
 
 namespace CVrpPdTwDynamic.Models
@@ -10,9 +9,9 @@ namespace CVrpPdTwDynamic.Models
         public static RoutingModel CreateRoutingModel(RoutingIndexManager manager,
                                            DataModel data,
                                            long[,] costMatrix,
-                                           List<List<string>> started_deliveries,
-                                           List<List<Tuple<string, string>>> pd_constraints,
-                                           BiMap<string, int> map
+                                           List<List<string>>? started_deliveries,
+                                           List<List<Tuple<string, string>>>? pd_constraints,
+                                           BiMap<string, int>? map
                                            )
         {
 

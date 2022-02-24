@@ -34,7 +34,7 @@ public class VrpPickupDelivery
         BiMap<string, string> Pd_map = new BiMap<string, string>() { };
 
 
-        InputReader.ReadStandardInput(standardInput, ref vehicleNumber, ref demands,
+        IOReader.ReadStandardInput(standardInput, ref vehicleNumber, ref demands,
                           ref locations, ref tw, ref Pd, ref map);
 
         foreach (var pair in Pd)
@@ -49,7 +49,7 @@ public class VrpPickupDelivery
         List<int> speed = new List<int>();
         List<int> cost = new List<int>();
 
-        InputReader.ReadRiderInput(riderInput, ref cap_rider, ref locations_rider, ref tw_rider,
+        IOReader.ReadRiderInput(riderInput, ref cap_rider, ref locations_rider, ref tw_rider,
                        ref speed, ref cost, vehicleNumber);
 
         //InputReader.SaveWorldLocations(locations_rider, locations, map, 0);
@@ -65,7 +65,7 @@ public class VrpPickupDelivery
         RoutingIndexManager manager =
             new RoutingIndexManager(data.Locations.GetLength(0), data.vehicleNumber, data.Starts, data.Ends);
 
-        long[,] costMatrix = DistanceMatrix.ComputeEuclideanCostMatrix(data.Locations);
+        long[,] costMatrix = Matrix.ComputeEuclideanCostMatrix(data.Locations);
 
         RoutingModel routing = Routing.CreateRoutingModel(manager, data, costMatrix, null, null, null);
         RoutingSearchParameters searchParameters =
@@ -217,7 +217,7 @@ public class VrpPickupDelivery
         manager =
             new RoutingIndexManager(data.Locations.GetLength(0), data.vehicleNumber, data.Starts, data.Ends);
 
-        costMatrix = DistanceMatrix.ComputeEuclideanCostMatrix(data.Locations);
+        costMatrix = Matrix.ComputeEuclideanCostMatrix(data.Locations);
 
         // Create Routing Model.
         routing = Routing.CreateRoutingModel(manager, data, costMatrix, started_deliveries, pd_constraints, map_new);

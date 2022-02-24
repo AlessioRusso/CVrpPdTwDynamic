@@ -47,7 +47,5 @@ namespace CVrpPdTwDynamic.Utils
             sw.Close();
             return solution_map;
         }
-
-
     }
 }

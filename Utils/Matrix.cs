@@ -1,6 +1,6 @@
 namespace CVrpPdTwDynamic.Utils
 {
-    public class DistanceMatrix
+    public class Matrix
     {
         public static long[,] ComputeEuclideanCostMatrix(in long[,] locations)
         {
@@ -19,11 +19,6 @@ namespace CVrpPdTwDynamic.Utils
                                             Math.Pow(locations[toNode, 1] - locations[fromNode, 1], 2));
                 }
             }
-            return distanceMatrix;
-        }
-
-        public static long[,] ComputeCostMatrix(in long[,] distanceMatrix, in int[][] Orders, in int n_riders)
-        {
             return distanceMatrix;
         }
     }
