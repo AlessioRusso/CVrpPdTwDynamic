@@ -78,7 +78,7 @@ public class VrpPickupDelivery
         List<List<Tuple<string, long, long>>> solution_map = Solution.PrintSolution(data, routing, manager, solution, map, 0);
         BiMap<string, int> map_new = new BiMap<string, int>() { };
 
-        List<int> present = new List<int> { 2, 0 };
+        List<int> present = new List<int> { 0, 0 };
 
         long[,] locations_rider_new = new long[data.vehicleNumber, 2];
         long[,] tw_rider_new = new long[data.vehicleNumber, 2];
@@ -126,7 +126,7 @@ public class VrpPickupDelivery
         }
 
 
-        int new_loc = 0;
+        int new_loc = 2;
         List<long> demands_new = new List<long>();
         long[,] locations_new = new long[locations.GetLength(0) - past + new_loc, 2];
         long[,] tw_new = new long[locations.GetLength(0) - past + new_loc, 2];
@@ -191,24 +191,27 @@ public class VrpPickupDelivery
             started_deliveries.Add(single_delivery);
             pd_constraints.Add(pick_delivery_constraint);
         }
-        /*
-                locations_new[n_loc, 0] = 12;
-                locations_new[n_loc, 1] = 1;
-                tw_new[n_loc, 0] = 4;
-                tw_new[n_loc, 1] = 1000;
-                demands_new.Add(10);
-                map_new.Add("nodeD", n_loc + data.vehicleNumber);
-                n_loc++;
-                locations_new[n_loc, 0] = 16;
-                locations_new[n_loc, 1] = 1;
-                tw_new[n_loc, 0] = 5;
-                tw_new[n_loc, 1] = 800;
-                demands_new.Add(-10);
-                map_new.Add("nodeDD", n_loc + data.vehicleNumber);
-                n_loc++;
 
-                Pd_new.Add(Tuple.Create("nodeD", "nodeDD"));
-        */
+        locations_new[n_loc, 0] = 3;
+        locations_new[n_loc, 1] = 1;
+        tw_new[n_loc, 0] = 6;
+        tw_new[n_loc, 1] = 1000;
+        demands_new.Add(10);
+        map_new.Add("nodeD", n_loc + data.vehicleNumber);
+        n_loc++;
+        locations_new[n_loc, 0] = 17;
+        locations_new[n_loc, 1] = 1;
+        tw_new[n_loc, 0] = 30;
+        tw_new[n_loc, 1] = 800;
+        demands_new.Add(-10);
+        map_new.Add("nodeDD", n_loc + data.vehicleNumber);
+        n_loc++;
+
+        Pd_new.Add(Tuple.Create("nodeD", "nodeDD"));
+        List<Tuple<string, string>> newOrders = new List<Tuple<string, string>> { };
+
+        newOrders.Add(Tuple.Create("nodeD", "nodeDD"));
+
         //InputReader.SaveWorldLocations(locations_rider_new, locations_new, map_new, 1);
         data = DataModel.BuildDataModel(locations_rider_new, locations_new, tw_rider_new, tw_new, demands_new, cap_rider,
                                     Pd_new, map_new, speed, cost, cargo_new, vehicleNumber);
@@ -218,6 +221,8 @@ public class VrpPickupDelivery
             new RoutingIndexManager(data.Locations.GetLength(0), data.vehicleNumber, data.Starts, data.Ends);
 
         costMatrix = Matrix.ComputeEuclideanCostMatrix(data.Locations);
+
+        costMatrix = Matrix.StartRiderCost(map_new, solution_map, costMatrix, newOrders, present);
 
         // Create Routing Model.
         routing = Routing.CreateRoutingModel(manager, data, costMatrix, started_deliveries, pd_constraints, map_new);
