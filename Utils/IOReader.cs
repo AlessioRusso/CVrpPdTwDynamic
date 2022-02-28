@@ -33,22 +33,12 @@ namespace CVrpPdTwDynamic.Utils
                 // add riders to map 
                 for (int i = 0; i < n; i++)
                 {
-                    map.Add($"rider{i + 1}", i + 1);
+                    map.Add($"rider{i + 1}", i);
                 }
 
-                // read depot information
-                splitted = SplitInput(input);
-                map.Add(splitted[0], 0);
-
-                int depotX = int.Parse(splitted[1]);
-                int depotY = int.Parse(splitted[2]);
-
-                int ready_depot = int.Parse(splitted[4]);
-                int due_depot = int.Parse(splitted[5]);
-                demands.Add(0);
 
                 // start reading locations
-                int n_loc = 1;
+                int n_loc = 0;
                 while (!input.EndOfStream)
                 {
                     splitted = SplitInput(input);
@@ -67,19 +57,15 @@ namespace CVrpPdTwDynamic.Utils
 
                 // initialize time windows and locations
                 int n_nodes = coordinates.Count;
-                Locations = new long[n_nodes + 1, 2];
-                tw = new long[n_nodes + 1, 2];
-                Locations[0, 0] = depotX;
-                Locations[0, 1] = depotY;
-                tw[0, 0] = ready_depot;
-                tw[0, 1] = due_depot;
+                Locations = new long[n_nodes, 2];
+                tw = new long[n_nodes, 2];
                 int j = 0;
 
                 // build locations 
                 foreach (var pair in coordinates)
                 {
-                    Locations[j + 1, 0] = pair.Item1;
-                    Locations[j + 1, 1] = pair.Item2;
+                    Locations[j, 0] = pair.Item1;
+                    Locations[j, 1] = pair.Item2;
                     j++;
                 }
 
@@ -87,8 +73,8 @@ namespace CVrpPdTwDynamic.Utils
                 j = 0;
                 foreach (var pair in times)
                 {
-                    tw[j + 1, 0] = pair.Item1;
-                    tw[j + 1, 1] = pair.Item2;
+                    tw[j, 0] = pair.Item1;
+                    tw[j, 1] = pair.Item2;
                     j++;
                 }
 
@@ -98,7 +84,7 @@ namespace CVrpPdTwDynamic.Utils
         // The input files follow the "Li & Lim" format
         public static void ReadRiderInput(string fileName, ref List<long> cap_rider,
                               ref long[,] Locations_riders, ref long[,] tw_rider,
-                              ref List<int> speed, ref List<int> cost, int vehicleNumber)
+                              ref List<int> speed, ref List<int> cost, ref List<int> endsTurn, int vehicleNumber)
         {
             if (fileName == "")
             {
@@ -125,6 +111,7 @@ namespace CVrpPdTwDynamic.Utils
                     cap_rider.Add(int.Parse(splitted[5]));
                     tw_rider[i, 0] = int.Parse(splitted[3]);
                     tw_rider[i, 1] = int.Parse(splitted[4]);
+                    endsTurn.Add(int.Parse(splitted[4]));
                     speed.Add(int.Parse(splitted[6]));
                     cost.Add(int.Parse(splitted[7]));
                     i = i + 1;

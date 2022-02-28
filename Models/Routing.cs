@@ -37,7 +37,7 @@ namespace CVrpPdTwDynamic.Models
                     var fromNode = manager.IndexToNode(fromIndex);
                     var toNode = manager.IndexToNode(toIndex);
                     // to depot
-                    if (toNode == 0)
+                    if (toNode == data.Ends[j])
                     {
                         return DataModel.CostDelivery * data.vehicleSpeed[j];
                     }
@@ -96,7 +96,7 @@ namespace CVrpPdTwDynamic.Models
                     // Convert from routing variable Index to time matrix NodeIndex.
                     var fromNode = manager.IndexToNode(fromIndex);
                     var toNode = manager.IndexToNode(toIndex);
-                    if (toNode == 0)
+                    if (toNode == data.Ends[j])
                     {
                         return data.delivery_service_time;
                     }
@@ -146,19 +146,29 @@ namespace CVrpPdTwDynamic.Models
             RoutingDimension timeDimension = routing.GetMutableDimension("Time");
 
             // Add time window constraints for each location except depot.
-            int tw_init = data.vehicleNumber + 1;
+            int tw_init = data.vehicleNumber;
 
-            for (int i = tw_init; i < data.TimeWindows.GetLength(0); ++i)
+            for (int i = tw_init; i < data.TimeWindows.GetLength(0) - data.vehicleNumber; ++i)
             {
+
                 long index = manager.NodeToIndex(i);
                 timeDimension.CumulVar(index).SetRange(data.TimeWindows[i, 0], data.TimeWindows[i, 1]);
                 timeDimension.SetCumulVarSoftUpperBound(index, data.TimeWindows[i, 0], DataModel.Penalty);
             }
+
+            int rider = 0;
+            for (int i = data.TimeWindows.GetLength(0) - data.vehicleNumber; i < data.TimeWindows.GetLength(0); ++i)
+            {
+                timeDimension.CumulVar(i).SetRange(data.endTurns[rider], DataModel.Infinite);
+                timeDimension.SetCumulVarSoftUpperBound(i, data.endTurns[rider], DataModel.Infinite);
+                rider++;
+            }
+
             // Add time window constraints for each vehicle start node.
             for (int i = 0; i < data.vehicleNumber; ++i)
             {
                 long index = routing.Start(i);
-                timeDimension.CumulVar(index).SetRange(data.TimeWindows[i + 1, 0], data.TimeWindows[i + 1, 1]);
+                timeDimension.CumulVar(index).SetRange(data.TimeWindows[i, 0], data.TimeWindows[i, 1]);
             }
 
             Solver solver = routing.solver();
