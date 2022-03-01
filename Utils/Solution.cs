@@ -7,6 +7,18 @@ namespace CVrpPdTwDynamic.Utils
 {
     public class Solution
     {
+
+        public static int VisitedLocations(List<int> present)
+        {
+            int past = 0;
+            for (int i = 0; i < present.Count; i++)
+            {
+                if (present[i] != 0)
+                    past += present[i] - 1;
+            }
+            return past;
+        }
+
         public static List<List<Tuple<string, long, long>>> PrintSolution(in DataModel data, in RoutingModel routing, in RoutingIndexManager manager,
                         in Assignment solution, in BiMap<string, int> map, int run)
         {
