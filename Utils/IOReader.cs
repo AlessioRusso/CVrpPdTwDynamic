@@ -128,19 +128,15 @@ namespace CVrpPdTwDynamic.Utils
             var rider = ridersLocations.GetLength(0);
             for (int i = 0; i < ridersLocations.GetLength(0); i++)
             {
-                swRider.Write(map.Reverse[i + 1] + " ");
+                swRider.Write(map.Reverse[i] + " ");
                 swRider.Write(ridersLocations[i, 0] + " " + ridersLocations[i, 1]);
                 swRider.WriteLine();
             }
             swRider.Close();
 
             StreamWriter swPd = new StreamWriter($"locationsPd{run}.csv");
-            swPd.Write(map.Reverse[0] + " ");
-            swPd.Write(pdLocations[0, 0] + " " + pdLocations[0, 1]);
-            swPd.WriteLine();
 
-
-            for (int i = 1; i < pdLocations.GetLength(0); i++)
+            for (int i = 0; i < pdLocations.GetLength(0); i++)
             {
                 swPd.Write(map.Reverse[i + rider] + " ");
                 swPd.Write(pdLocations[i, 0] + " " + pdLocations[i, 1]);

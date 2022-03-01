@@ -61,7 +61,7 @@ public class VrpPickupDelivery
 
         // Build data model
         DataModel data = DataModel.BuildDataModel(locations_rider, locations, tw_rider, tw, demands, cap_rider,
-                                        Pd, ref map, speed, cost, cargo, endsTurn, vehicleNumber);
+                                                  Pd, ref map, speed, cost, cargo, endsTurn, vehicleNumber);
 
 
         // Create Routing Index Manager
@@ -81,46 +81,47 @@ public class VrpPickupDelivery
         List<List<Tuple<string, long, long>>> solution_map = Solution.PrintSolution(data, routing, manager, solution, map, 0);
         BiMap<string, int> map_new = new BiMap<string, int>() { };
 
-        List<int> present = new List<int> { 2, 0, 0 };
+        List<int> present = new List<int> { 0, 1, 0 };
 
         long[,] locations_rider_new = new long[data.vehicleNumber, 2];
         long[,] tw_rider_new = new long[data.vehicleNumber, 2];
 
         long[] cargo_new = new long[data.vehicleNumber];
 
-        for (int i = 0; i < solution_map.Count; i++)
+
+        foreach (var (route, i) in solution_map.Select((value, i) => (value, i)))
         {
-            var toIndex = map.Forward[solution_map[i][present[i]].Item1];
+            var toIndex = map.Forward[route[present[i]].Item1];
             // park state
             if (toIndex == data.Ends[i])
             {
-                var prevIndex = map.Forward[solution_map[i][present[i] - 1].Item1];
+                var prevIndex = map.Forward[route[present[i] - 1].Item1];
                 locations_rider_new[i, 0] = data.Locations[prevIndex, 0];
                 locations_rider_new[i, 1] = data.Locations[prevIndex, 1];
-                tw_rider_new[i, 0] = solution_map[i][present[i] - 1].Item2 + DataModel.CostDelivery;
-                tw_rider_new[i, 1] = solution_map[i][present[i] - 1].Item3 + DataModel.CostDelivery;
+                tw_rider_new[i, 0] = route[present[i] - 1].Item2 + DataModel.CostDelivery;
+                tw_rider_new[i, 1] = route[present[i] - 1].Item3 + DataModel.CostDelivery;
             }
             else
             {
                 locations_rider_new[i, 0] = data.Locations[toIndex, 0];
                 locations_rider_new[i, 1] = data.Locations[toIndex, 1];
-                tw_rider_new[i, 0] = solution_map[i][present[i]].Item2;
-                tw_rider_new[i, 1] = solution_map[i][present[i]].Item3;
+                tw_rider_new[i, 0] = route[present[i]].Item2;
+                tw_rider_new[i, 1] = route[present[i]].Item3;
             }
         }
 
-
-        for (int i = 0; i < solution_map.Count; i++)
+        foreach (var (route, i) in solution_map.Select((value, i) => (value, i)))
         {
             map_new.Add($"rider{i + 1}", i);
             long actualCargo = 0;
-            for (int j = 1; j < solution_map[i].Count && j < present[i]; j++)
+            for (int j = 1; j < route.Count && j < present[i]; j++)
             {
-                actualCargo += data.Demands[map.Forward[solution_map[i][j].Item1]];
+                actualCargo += data.Demands[map.Forward[route[j].Item1]];
             }
             cargo_new[i] = actualCargo;
         }
 
+        // locations already visisted
         int past = 0;
         for (int i = 0; i < present.Count; i++)
         {
@@ -137,19 +138,16 @@ public class VrpPickupDelivery
         List<List<Tuple<string, string>>> pd_constraints = new List<List<Tuple<string, string>>>();
         List<Tuple<string, string>> Pd_new = new List<Tuple<string, string>> { };
 
-
-
-
         int n_loc = 0;
-        for (int i = 0; i < solution_map.Count; i++)
+        foreach (var (route, i) in solution_map.Select((value, i) => (value, i)))
         {
             List<string> single_delivery = new List<string>();
             List<Tuple<string, string>> pick_delivery_constraint = new List<Tuple<string, string>>();
 
-            for (int j = solution_map[i].Count - 1; j >= present[i]; j--)
+            for (int j = route.Count - 1; j >= present[i]; j--)
             {
-                var node = solution_map[i][j].Item1;
-                if (CheckOrders.isDeliveryIsPastPickUp(node, solution_map[i], Pd_map, present[i]))
+                var node = route[j].Item1;
+                if (CheckOrders.isDeliveryIsPastPickUp(node, route, Pd_map, present[i]))
                 {
                     locations_new[n_loc, 0] = data.Locations[map.Forward[node], 0];
                     locations_new[n_loc, 1] = data.Locations[map.Forward[node], 1];
@@ -160,7 +158,7 @@ public class VrpPickupDelivery
                     n_loc++;
                     single_delivery.Add(node);
                 }
-                else if (CheckOrders.isDeliveryIsFuturePickUp(node, solution_map[i], Pd_map, present[i]))
+                else if (CheckOrders.isDeliveryIsFuturePickUp(node, route, Pd_map, present[i]))
                 {
                     var pickup_node = Pd_map.Reverse[node];
                     locations_new[n_loc, 0] = data.Locations[map.Forward[pickup_node], 0];
@@ -177,7 +175,7 @@ public class VrpPickupDelivery
                     demands_new.Add(data.Demands[map.Forward[node]]);
                     map_new.Add(node, n_loc + data.vehicleNumber);
                     n_loc++;
-                    if (CheckOrders.isPresentPickUp(pickup_node, solution_map[i], present[i]))
+                    if (CheckOrders.isPresentPickUp(pickup_node, route, present[i]))
                     {
                         pick_delivery_constraint.Add(Tuple.Create(pickup_node, node));
                     }
@@ -192,7 +190,7 @@ public class VrpPickupDelivery
 
         locations_new[n_loc, 0] = 10;
         locations_new[n_loc, 1] = 1;
-        tw_new[n_loc, 0] = 20;
+        tw_new[n_loc, 0] = 15;
         tw_new[n_loc, 1] = 1000;
         demands_new.Add(10);
         map_new.Add("nodeD", n_loc + data.vehicleNumber);

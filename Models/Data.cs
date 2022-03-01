@@ -20,7 +20,7 @@ namespace CVrpPdTwDynamic.Models
 
         public const int ServiceTimeSinglePickup = 1;
         public const int Infinite = 100000000;
-        public const int Penalty = 1;
+        public const int Penalty = 3;
         public int pick_service_time = 5;
         public int delivery_service_time = 1;
         public int[] Starts = { };
@@ -33,23 +33,19 @@ namespace CVrpPdTwDynamic.Models
                         List<int> speed, List<int> cost, long[] cargo)
         {
             this.vehicleNumber = n;
-            Starts = starts.ToArray();
-            Ends = ends.ToArray();
+            this.Starts = starts.ToArray();
+            this.Ends = ends.ToArray();
             this.endTurns = endTurns.ToArray();
-            vehicleCapacities = cap.ToArray();
-            Demands = dem.ToArray();
-            Locations = loc;
-            TimeWindows = tw;
-            PickupsDeliveries = pickDel;
-            vehicleCost = new int[this.vehicleNumber];
-            vehicleSpeed = new int[this.vehicleNumber];
-            for (int i = 0; i < this.vehicleNumber; i++)
-            {
-                vehicleCost[i] = cost[i];
-                vehicleSpeed[i] = speed[i];
-            }
-            Cargo = cargo;
-
+            this.vehicleCapacities = cap.ToArray();
+            this.Demands = dem.ToArray();
+            this.Locations = loc;
+            this.TimeWindows = tw;
+            this.PickupsDeliveries = pickDel;
+            this.vehicleCost = new int[this.vehicleNumber];
+            this.vehicleSpeed = new int[this.vehicleNumber];
+            this.vehicleCost = cost.ToArray();
+            this.vehicleSpeed = speed.ToArray();
+            this.Cargo = cargo;
             for (int i = 0; i < this.vehicleNumber; i++)
             {
                 this.MaxDimension.Add(DataModel.Infinite);
@@ -84,6 +80,7 @@ namespace CVrpPdTwDynamic.Models
             {
                 starts.Add(i);
             }
+
 
             for (int i = 0; i < locations_rider.GetLength(0); i++)
             {
@@ -136,7 +133,6 @@ namespace CVrpPdTwDynamic.Models
                 ends.Add(i);
                 map.Add($"park{rider}", i);
             }
-
 
             // First Run
             return new DataModel(vehicleNumber, cap_rider, new_demands, new_locations, new_tw, mapped_pd, starts, ends, endTurns, speed, cost, cargo);
