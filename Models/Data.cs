@@ -12,19 +12,20 @@ namespace CVrpPdTwDynamic.Models
         public long[,] Locations { get; private set; }
         public long[,] TimeWindows { get; private set; }
         public int[][] PickupsDeliveries { get; private set; }
+        public List<long> MaxDimension = new List<long>();
+
 
         public const int CostPickup = 4; // cents
         public const int CostDelivery = 1; // cents
 
         public const int ServiceTimeSinglePickup = 1;
         public const int Infinite = 100000000;
-        public const int Penalty = 3;
+        public const int Penalty = 1;
         public int pick_service_time = 5;
         public int delivery_service_time = 1;
         public int[] Starts = { };
         public int[] Ends = { };
         public int[] endTurns = { };
-
 
         public DataModel(int n, List<long> cap, List<long> dem, long[,] loc,
                         long[,] tw, int[][] pickDel, List<int> starts, List<int> ends,
@@ -48,6 +49,11 @@ namespace CVrpPdTwDynamic.Models
                 vehicleSpeed[i] = speed[i];
             }
             Cargo = cargo;
+
+            for (int i = 0; i < this.vehicleNumber; i++)
+            {
+                this.MaxDimension.Add(DataModel.Infinite);
+            }
         }
 
 

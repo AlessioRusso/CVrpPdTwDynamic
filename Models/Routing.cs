@@ -37,7 +37,7 @@ namespace CVrpPdTwDynamic.Models
                     var fromNode = manager.IndexToNode(fromIndex);
                     var toNode = manager.IndexToNode(toIndex);
                     // to depot
-                    if (toNode == data.Ends[j])
+                    if (toNode == manager.IndexToNode(data.Ends[j]))
                     {
                         return DataModel.CostDelivery * data.vehicleSpeed[j];
                     }
@@ -96,7 +96,7 @@ namespace CVrpPdTwDynamic.Models
                     // Convert from routing variable Index to time matrix NodeIndex.
                     var fromNode = manager.IndexToNode(fromIndex);
                     var toNode = manager.IndexToNode(toIndex);
-                    if (toNode == data.Ends[j])
+                    if (toNode == manager.IndexToNode(data.Ends[j]))
                     {
                         return data.delivery_service_time;
                     }
@@ -139,7 +139,7 @@ namespace CVrpPdTwDynamic.Models
             routing.AddDimensionWithVehicleTransitAndCapacity(
                 timeCallbackIndexAll,
                 3000,   // no slack
-                new long[] { DataModel.Infinite, DataModel.Infinite },  // vehicle maximum travel time
+                data.MaxDimension.ToArray(),  // vehicle maximum travel time
                 false,  // start cumul to zero
                 "Time");
 
