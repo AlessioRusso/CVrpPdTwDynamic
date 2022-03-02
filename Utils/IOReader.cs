@@ -1,4 +1,5 @@
 using BidirectionalMap;
+using CVrpPdTwDynamic.Models;
 
 namespace CVrpPdTwDynamic.Utils
 {
@@ -13,7 +14,7 @@ namespace CVrpPdTwDynamic.Utils
 
 
         // The input files follow the "Li & Lim" format
-        public static void ReadStandardInput(string fileName, ref int n, ref List<long> demands,
+        public static void ReadStandardInput(string fileName, ref List<long> demands,
                               ref long[,] Locations, ref long[,] tw, ref List<Tuple<string, string>> Pd,
                               ref BiMap<string, int> map)
         {
@@ -28,14 +29,7 @@ namespace CVrpPdTwDynamic.Utils
                 // read first row
                 string[] splitted;
                 splitted = SplitInput(input);
-                n = int.Parse(splitted[0]);
-
-                // add riders to map 
-                for (int i = 0; i < n; i++)
-                {
-                    map.Add($"rider{i + 1}", i);
-                }
-
+                int n = int.Parse(splitted[0]);
 
                 // start reading locations
                 int n_loc = 0;
@@ -82,9 +76,9 @@ namespace CVrpPdTwDynamic.Utils
         }
 
         // The input files follow the "Li & Lim" format
-        public static void ReadRiderInput(string fileName, ref List<long> cap_rider,
-                              ref long[,] Locations_riders, ref long[,] tw_rider,
-                              ref List<int> speed, ref List<int> cost, ref List<int> endsTurn, int vehicleNumber)
+        public static void ReadRiderInput(string fileName,
+                                          ref List<Rider> LogisticOperators
+                                        )
         {
             if (fileName == "")
             {
@@ -95,26 +89,22 @@ namespace CVrpPdTwDynamic.Utils
             {
 
                 string[] splitted;
-                Locations_riders = new long[vehicleNumber, 2];
-                tw_rider = new long[vehicleNumber, 2];
-                int i = 0;
 
                 while (!input.EndOfStream)
                 {
                     splitted = SplitInput(input);
-
+                    Rider op = new Rider();
                     if (splitted.Length < 7) break;
-
-                    Locations_riders[i, 0] = int.Parse(splitted[1]);
-                    Locations_riders[i, 1] = int.Parse(splitted[2]);
-
-                    cap_rider.Add(int.Parse(splitted[5]));
-                    tw_rider[i, 0] = int.Parse(splitted[3]);
-                    tw_rider[i, 1] = int.Parse(splitted[4]);
-                    endsTurn.Add(int.Parse(splitted[4]));
-                    speed.Add(int.Parse(splitted[6]));
-                    cost.Add(int.Parse(splitted[7]));
-                    i = i + 1;
+                    op.StartLocation = new NetTopologySuite.Geometries.Point(int.Parse(splitted[1]), int.Parse(splitted[2]));
+                    op.Capacity = int.Parse(splitted[5]);
+                    op.StartTime = int.Parse(splitted[3]);
+                    op.EndTime = int.Parse(splitted[4]);
+                    op.EndTurn = int.Parse(splitted[4]);
+                    op.Vehicle = int.Parse(splitted[6]);
+                    op.Name = splitted[0];
+                    op.Surname = splitted[0];
+                    op.guid = op.Name + op.Surname;
+                    LogisticOperators.Add(op);
                 }
             }
         }

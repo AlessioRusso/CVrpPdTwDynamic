@@ -78,11 +78,9 @@ namespace CVrpPdTwDynamic.Utils
 
         public static void RiderCurrentState(
                                            in DataModel data,
-                                           ref long[,] locations_rider_new,
-                                           ref long[,] tw_rider_new,
-                                           ref long[] cargo_new,
+                                           in List<Rider> PreviousLogisticOperators,
+                                           ref List<Rider> CurrentLogisticOperators,
                                            in BiMap<string, int> map,
-                                           ref BiMap<string, int> map_new,
                                            List<List<Tuple<string, long, long>>> solution_map,
                                            List<int> present
                                            )
@@ -91,32 +89,42 @@ namespace CVrpPdTwDynamic.Utils
             {
                 var toIndex = map.Forward[route[present[i]].Item1];
                 // park state
+                Rider op = new Rider();
+                op.Name = PreviousLogisticOperators[i].Name;
+                op.Surname = PreviousLogisticOperators[i].Surname;
+                op.guid = op.Name + op.Surname;
+                op.DeliveryFixedFee = PreviousLogisticOperators[i].DeliveryFixedFee;
+                op.PickupFixedFee = PreviousLogisticOperators[i].DeliveryFixedFee;
+                op.Capacity = PreviousLogisticOperators[i].Capacity;
+
                 if (toIndex == data.Ends[i])
                 {
                     var prevIndex = map.Forward[route[present[i] - 1].Item1];
-                    locations_rider_new[i, 0] = data.Locations[prevIndex, 0];
-                    locations_rider_new[i, 1] = data.Locations[prevIndex, 1];
-                    tw_rider_new[i, 0] = route[present[i] - 1].Item2 + DataModel.CostDelivery;
-                    tw_rider_new[i, 1] = route[present[i] - 1].Item3 + DataModel.CostDelivery;
+
+                    op.StartLocation = new NetTopologySuite.Geometries.Point(data.Locations[prevIndex, 0], data.Locations[prevIndex, 1]);
+                    op.StartTime = route[present[i] - 1].Item2 + op.DeliveryFixedFee;
+                    op.EndTime = route[present[i] - 1].Item3 + op.DeliveryFixedFee;
+                    op.EndTurn = data.endTurns[i];
+
                 }
                 else
                 {
-                    locations_rider_new[i, 0] = data.Locations[toIndex, 0];
-                    locations_rider_new[i, 1] = data.Locations[toIndex, 1];
-                    tw_rider_new[i, 0] = route[present[i]].Item2;
-                    tw_rider_new[i, 1] = route[present[i]].Item3;
+                    op.StartLocation = new NetTopologySuite.Geometries.Point(data.Locations[toIndex, 0], data.Locations[toIndex, 1]);
+                    op.StartTime = route[present[i]].Item2;
+                    op.EndTime = route[present[i]].Item3;
+                    op.EndTurn = data.endTurns[i];
                 }
+                CurrentLogisticOperators.Add(op);
             }
 
             foreach (var (route, i) in solution_map.Select((value, i) => (value, i)))
             {
-                map_new.Add($"rider{i + 1}", i);
                 long actualCargo = 0;
                 for (int j = 1; j < route.Count && j < present[i]; j++)
                 {
                     actualCargo += data.Demands[map.Forward[route[j].Item1]];
                 }
-                cargo_new[i] = actualCargo;
+                CurrentLogisticOperators[i].Cargo = actualCargo;
             }
 
         }

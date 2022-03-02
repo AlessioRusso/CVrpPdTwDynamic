@@ -7,17 +7,10 @@ namespace CVrpPdTwDynamic.Models
         public long[] vehicleCapacities { get; private set; }
         public long[] Cargo { get; private set; }
         public long[] Demands { get; private set; }
-        public int[] vehicleCost { get; private set; }
-        public int[] vehicleSpeed { get; private set; }
         public long[,] Locations { get; private set; }
         public long[,] TimeWindows { get; private set; }
         public int[][] PickupsDeliveries { get; private set; }
         public List<long> MaxDimension = new List<long>();
-
-
-        public const int CostPickup = 4; // cents
-        public const int CostDelivery = 1; // cents
-
         public const int ServiceTimeSinglePickup = 1;
         public const int Infinite = 100000000;
         public const int Penalty = 3;
@@ -27,25 +20,30 @@ namespace CVrpPdTwDynamic.Models
         public int[] Ends = { };
         public int[] endTurns = { };
 
-        public DataModel(int n, List<long> cap, List<long> dem, long[,] loc,
-                        long[,] tw, int[][] pickDel, List<int> starts, List<int> ends,
+        public DataModel(int vehicleNumber,
+                        List<long> Demands,
+                        List<int> Starts,
+                        List<int> Ends,
+                        List<long> vehicleCapacities,
+                        List<long> Cargo,
                         List<int> endTurns,
-                        List<int> speed, List<int> cost, long[] cargo)
+                        long[,] loc,
+                        long[,] tw,
+                        int[][] pickDel
+                    )
         {
-            this.vehicleNumber = n;
-            this.Starts = starts.ToArray();
-            this.Ends = ends.ToArray();
+            this.vehicleNumber = vehicleNumber;
+            this.Demands = Demands.ToArray();
+            this.Starts = Starts.ToArray();
+            this.Ends = Ends.ToArray();
+            this.vehicleCapacities = vehicleCapacities.ToArray();
+            this.Cargo = Cargo.ToArray();
+
             this.endTurns = endTurns.ToArray();
-            this.vehicleCapacities = cap.ToArray();
-            this.Demands = dem.ToArray();
             this.Locations = loc;
             this.TimeWindows = tw;
             this.PickupsDeliveries = pickDel;
-            this.vehicleCost = new int[this.vehicleNumber];
-            this.vehicleSpeed = new int[this.vehicleNumber];
-            this.vehicleCost = cost.ToArray();
-            this.vehicleSpeed = speed.ToArray();
-            this.Cargo = cargo;
+
             for (int i = 0; i < this.vehicleNumber; i++)
             {
                 this.MaxDimension.Add(DataModel.Infinite);
@@ -53,63 +51,55 @@ namespace CVrpPdTwDynamic.Models
         }
 
 
-        static public DataModel BuildDataModel(long[,] locations_rider, long[,] locations, long[,] tw_rider,
-                                  long[,] tw, List<long> demands, List<long> cap_rider,
-                                  List<Tuple<string, string>> Pd,
-                                  ref BiMap<string, int> map,
-                                  List<int> speed,
-                                  List<int> cost,
-                                  long[] cargo,
-                                  List<int> endTurns,
-                                  int vehicleNumber
-       )
+        static public DataModel BuildDataModel(
+                                                List<Rider> LogisticOpeartors, long[,] locations,
+                                                long[,] tw,
+                                                List<long> demandOrders,
+                                                List<Tuple<string, string>> Pd,
+                                                ref BiMap<string, int> map
+        )
 
         {
-            List<long> new_demands = new List<long>();
-            long[,] new_locations = new long[(locations_rider.GetLength(0) * 2) + locations.GetLength(0), 2];
-            long[,] new_tw = new long[(tw_rider.GetLength(0) * 2) + tw.GetLength(0), 2];
+            List<long> demands = new List<long>();
+            List<long> cargo = new List<long>();
+            List<long> vehicleCapacities = new List<long>();
+            List<int> endTurns = new List<int>();
 
 
-            List<int> starts = new List<int>();
-            List<int> ends = new List<int>();
+            int vehicleNumber = LogisticOpeartors.Count();
+            long[,] new_locations = new long[(vehicleNumber * 2) + locations.GetLength(0), 2];
+            long[,] new_tw = new long[(vehicleNumber * 2) + tw.GetLength(0), 2];
 
-            List<int> endTurn = new List<int>();
+            List<int> Starts = new List<int>();
+            List<int> Ends = new List<int>();
 
-
-            for (int i = 0; i < vehicleNumber; i++)
+            foreach (var (op, i) in LogisticOpeartors.Select((value, i) => (value, i)))
             {
-                starts.Add(i);
+                new_locations[i, 0] = (long)op.StartLocation.Coordinate.X;
+                new_locations[i, 1] = (long)op.StartLocation.Coordinate.Y;
+                new_tw[i, 0] = op.StartTime;
+                new_tw[i, 1] = op.EndTime;
+                vehicleCapacities.Add(op.Capacity);
+                Starts.Add(i);
+                demands.Add(0);
+                cargo.Add(op.Cargo);
+                endTurns.Add(op.EndTurn);
             }
 
-
-            for (int i = 0; i < locations_rider.GetLength(0); i++)
-            {
-                new_locations[i, 0] = locations_rider[i, 0];
-                new_locations[i, 1] = locations_rider[i, 1];
-                new_tw[i, 0] = tw_rider[i, 0];
-                new_tw[i, 1] = tw_rider[i, 1];
-            }
-            int j = locations_rider.GetLength(0);
             for (int i = 0; i < locations.GetLength(0); i++)
             {
                 //   if (locations[i, 0] != 0 & locations[i, 1] != 0)
                 // {
-                new_locations[i + j, 0] = locations[i, 0];
-                new_locations[i + j, 1] = locations[i, 1];
-                new_tw[i + j, 0] = tw[i, 0];
-                new_tw[i + j, 1] = tw[i, 1];
+                new_locations[i + vehicleNumber, 0] = locations[i, 0];
+                new_locations[i + vehicleNumber, 1] = locations[i, 1];
+                new_tw[i + vehicleNumber, 0] = tw[i, 0];
+                new_tw[i + vehicleNumber, 1] = tw[i, 1];
                 //  }
             }
 
-            // add demand rider
-            for (int i = 0; i < vehicleNumber; i++)
-            {
-                new_demands.Add(0);
-            }
-
-            // add demans  locations
-            foreach (var d in demands)
-                new_demands.Add(d);
+            // add demands Order
+            foreach (var d in demandOrders)
+                demands.Add(d);
 
             int[][] mapped_pd = new int[Pd.Count][];
             int n_pair = 0;
@@ -119,23 +109,21 @@ namespace CVrpPdTwDynamic.Models
                 n_pair++;
             }
 
-            j = locations_rider.GetLength(0) + locations.GetLength(0);
-            int rider = 0;
             // Add park
-            for (int i = j; i < vehicleNumber + j; i++)
+            int j = vehicleNumber + locations.GetLength(0);
+            foreach (var (op, index) in LogisticOpeartors.Select((value, index) => (value, index)))
             {
-                new_demands.Add(0);
-                new_locations[i, 0] = 0;
-                new_locations[i, 1] = 0;
-                new_tw[i, 0] = tw_rider[rider, 1];
-                new_tw[i, 1] = Infinite;
-                rider++;
-                ends.Add(i);
-                map.Add($"park{rider}", i);
+                demands.Add(0);
+                new_locations[j + index, 0] = 0;
+                new_locations[j + index, 1] = 0;
+                new_tw[j + index, 0] = op.EndTurn;
+                new_tw[j + index, 1] = Infinite;
+                Ends.Add(j + index);
+                map.Add($"park{index}", j + index);
             }
 
             // First Run
-            return new DataModel(vehicleNumber, cap_rider, new_demands, new_locations, new_tw, mapped_pd, starts, ends, endTurns, speed, cost, cargo);
+            return new DataModel(vehicleNumber, demands, Starts, Ends, vehicleCapacities, cargo, endTurns, new_locations, new_tw, mapped_pd);
         }
     };
 }

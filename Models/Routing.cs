@@ -6,9 +6,11 @@ namespace CVrpPdTwDynamic.Models
     public class Routing
     {
 
-        public static RoutingModel CreateRoutingModel(RoutingIndexManager manager,
+        public static RoutingModel CreateRoutingModel(
+                                           RoutingIndexManager manager,
                                            DataModel data,
                                            long[,] costMatrix,
+                                           List<Rider> LogisticOperators,
                                            List<List<string>>? started_deliveries,
                                            List<List<Tuple<string, string>>>? pd_constraints,
                                            BiMap<string, int>? map
@@ -27,36 +29,35 @@ namespace CVrpPdTwDynamic.Models
             });
 
             // Cost.
-
             int[] costCallbackIndexAll = new int[data.vehicleNumber];
-            for (int i = 0; i < data.vehicleNumber; ++i)
+            foreach (var (op, index) in LogisticOperators.Select((value, index) => (value, index)))
             {
-                int j = i;
-                costCallbackIndexAll[i] = routing.RegisterTransitCallback((long fromIndex, long toIndex) =>
+                costCallbackIndexAll[index] = routing.RegisterTransitCallback((long fromIndex, long toIndex) =>
                 {
                     var fromNode = manager.IndexToNode(fromIndex);
                     var toNode = manager.IndexToNode(toIndex);
-                    // to depot
-                    if (toNode == manager.IndexToNode(data.Ends[j]))
+
+                    // to park node
+                    if (toNode == manager.IndexToNode(data.Ends[index]))
                     {
-                        return DataModel.CostDelivery * data.vehicleSpeed[j];
+                        return (long)op.DeliveryFixedFee * op.Vehicle;
                     }
 
-                    for (int i = 0; i < data.PickupsDeliveries.Count(); i++)
+                    foreach (var order in data.PickupsDeliveries)
                     {
                         // from pickup to somewhere else
-                        if (fromNode == data.PickupsDeliveries[i][0] && costMatrix[fromNode, toNode] > 0)
-                            return (DataModel.CostPickup * data.vehicleSpeed[j]) + costMatrix[fromNode, toNode];
+                        if (fromNode == order[0] && costMatrix[fromNode, toNode] > 0)
+                            return op.PickupFixedFee + costMatrix[fromNode, toNode];
 
                         // from delivery to somewhere else
-                        if (fromNode == data.PickupsDeliveries[i][1] && costMatrix[fromNode, toNode] > 0)
-                            return (DataModel.CostDelivery * data.vehicleSpeed[j]) + costMatrix[fromNode, toNode];
+                        if (fromNode == order[1] && costMatrix[fromNode, toNode] > 0)
+                            return ((long)op.DeliveryFixedFee * op.Vehicle) + costMatrix[fromNode, toNode];
 
                         // from delivery (past pickup) to somewhere else 
-                        for (int z = 0; started_deliveries != null && z < started_deliveries[j].Count; z++)
+                        for (int z = 0; started_deliveries != null && z < started_deliveries[index].Count; z++)
                         {
-                            if (fromNode == map.Forward[started_deliveries[j][z]] && costMatrix[fromNode, toNode] > 0)
-                                return (DataModel.CostDelivery * data.vehicleSpeed[j]) + costMatrix[fromNode, toNode];
+                            if (fromNode == map.Forward[started_deliveries[index][z]] && costMatrix[fromNode, toNode] > 0)
+                                return ((long)op.DeliveryFixedFee * op.Vehicle) + costMatrix[fromNode, toNode];
                         }
                     }
                     return costMatrix[fromNode, toNode];
@@ -85,53 +86,49 @@ namespace CVrpPdTwDynamic.Models
 
             int[] timeCallbackIndexAll = new int[data.vehicleNumber];
             //populate each vehicle's transitcallback
-            for (int i = 0; i < data.vehicleNumber; ++i)
+            foreach (var (op, index) in LogisticOperators.Select((value, index) => (value, index)))
             {
-                int j = i;
 
-                timeCallbackIndexAll[i] = routing.RegisterTransitCallback(
+                timeCallbackIndexAll[index] = routing.RegisterTransitCallback(
                 (long fromIndex, long toIndex) =>
                 {
 
                     // Convert from routing variable Index to time matrix NodeIndex.
                     var fromNode = manager.IndexToNode(fromIndex);
                     var toNode = manager.IndexToNode(toIndex);
-                    if (toNode == manager.IndexToNode(data.Ends[j]))
+                    if (toNode == manager.IndexToNode(data.Ends[index]))
                     {
                         return data.delivery_service_time;
                     }
-                    for (int z = 0; z < data.PickupsDeliveries.Count(); z++)
+                    foreach (var order in data.PickupsDeliveries)
                     {
                         // Double pickup in same node
-                        if (fromNode == data.PickupsDeliveries[z][0] && costMatrix[fromNode, toNode] == 0)
+                        if (fromNode == order[0] && costMatrix[fromNode, toNode] == 0)
                         {
-                            return (long)((costMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j])
-                                            + DataModel.ServiceTimeSinglePickup;
+                            return (long)((costMatrix[fromNode, toNode] / op.Vehicle) + DataModel.ServiceTimeSinglePickup);
                         }
 
-                        if (fromNode == data.PickupsDeliveries[z][0])
+                        if (fromNode == order[0])
                         {
-                            return (long)((costMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j])
-                                        + data.pick_service_time;
+                            return (long)((costMatrix[fromNode, toNode] / op.Vehicle) + data.pick_service_time);
                         }
-                        if (fromNode == data.PickupsDeliveries[z][1])
+                        if (fromNode == order[1])
                         {
-                            return (long)((costMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j])
-                                        + data.delivery_service_time;
+                            return (long)((costMatrix[fromNode, toNode] / op.Vehicle)
+                                        + data.delivery_service_time);
                         }
 
                         // from delivery (past pickup) to somewhere else 
-                        for (int p = 0; started_deliveries != null && p < started_deliveries[j].Count; p++)
+                        for (int p = 0; started_deliveries != null && p < started_deliveries[index].Count; p++)
                         {
-                            if (fromNode == map.Forward[started_deliveries[j][p]] && costMatrix[fromNode, toNode] > 0)
-                                return (long)((costMatrix[fromNode, toNode] * data.vehicleCost[j]) / data.vehicleSpeed[j])
-                                            + data.delivery_service_time;
+                            if (fromNode == map.Forward[started_deliveries[index][p]] && costMatrix[fromNode, toNode] > 0)
+                                return (long)((costMatrix[fromNode, toNode] / op.Vehicle)
+                                            + data.delivery_service_time);
                         }
 
 
                     }
-                    return (long)((costMatrix[fromNode, toNode]) * data.vehicleCost[j]) / data.vehicleSpeed[j];
-
+                    return (long)((costMatrix[fromNode, toNode]) / op.Vehicle);
                 }
                 );
             }
@@ -172,10 +169,10 @@ namespace CVrpPdTwDynamic.Models
             }
 
             Solver solver = routing.solver();
-            for (int i = 0; i < data.PickupsDeliveries.GetLength(0); i++)
+            foreach (var order in data.PickupsDeliveries)
             {
-                long pickupIndex = manager.NodeToIndex(data.PickupsDeliveries[i][0]);
-                long deliveryIndex = manager.NodeToIndex(data.PickupsDeliveries[i][1]);
+                long pickupIndex = manager.NodeToIndex(order[0]);
+                long deliveryIndex = manager.NodeToIndex(order[1]);
                 routing.AddPickupAndDelivery(pickupIndex, deliveryIndex);
                 solver.Add(solver.MakeEquality(routing.VehicleVar(pickupIndex), routing.VehicleVar(deliveryIndex)));
                 solver.Add(solver.MakeLessOrEqual(timeDimension.CumulVar(pickupIndex),
@@ -183,24 +180,22 @@ namespace CVrpPdTwDynamic.Models
                 routing.AddVariableMinimizedByFinalizer(timeDimension.CumulVar(deliveryIndex));
             }
 
-
-
             if (started_deliveries != null)
             {
-                for (int i = 0; i < started_deliveries.Count; i++)
+                foreach (var (deliveriesRider, i) in started_deliveries.Select((value, i) => (value, i)))
                 {
-                    for (int j = 0; j < started_deliveries[i].Count; j++)
+                    foreach (var delivery in deliveriesRider)
                     {
-                        routing.VehicleVar(manager.NodeToIndex(map.Forward[started_deliveries[i][j]])).SetValue(i);
+                        routing.VehicleVar(manager.NodeToIndex(map.Forward[delivery])).SetValue(i);
                     }
                 }
             }
 
             if (pd_constraints != null)
             {
-                for (int i = 0; i < pd_constraints.Count; i++)
+                foreach (var (ordersRider, i) in pd_constraints.Select((value, i) => (value, i)))
                 {
-                    foreach (var tuple in pd_constraints[i])
+                    foreach (var tuple in ordersRider)
                     {
                         routing.VehicleVar(manager.NodeToIndex(map.Forward[tuple.Item1])).SetValue(i);
                     }
@@ -209,7 +204,6 @@ namespace CVrpPdTwDynamic.Models
 
             return routing;
         }
-
 
     }
 }
