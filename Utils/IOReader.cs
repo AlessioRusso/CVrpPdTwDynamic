@@ -14,34 +14,44 @@ namespace CVrpPdTwDynamic.Utils
             return line.Split(new[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
         }
 
+        public static List<Order> ReadOrders(string fileName)
+        {
+            List<Order> orders = new();
+            ReadOrders(fileName, orders);
+            return orders;
+        }
 
         // The input files follow the "Li & Lim" format
-        public static void ReadOrders(string fileName, ref List<Order> orders)
+        public static void ReadOrders(string fileName, List<Order> orders)
         {
-            using (StreamReader input = new StreamReader(fileName))
-            {
-                string[] splitted;
-                splitted = SplitInput(input);
+            using StreamReader input = new StreamReader(fileName);
+            string[] splitted = SplitInput(input);
 
-                // start reading locations
-                while (!input.EndOfStream)
+            // start reading locations
+            while (!input.EndOfStream)
+            {
+                splitted = SplitInput(input);
+                Order order = new Order();
+                order.ProductCount = (int.Parse(splitted[3]));
+
+                order.Shop = new Shop()
                 {
-                    splitted = SplitInput(input);
-                    Order order = new Order();
-                    order.Shop = new Shop();
-                    order.Shop.guid = splitted[0];
-                    order.ProductCount = (int.Parse(splitted[3]));
-                    order.Shop.Latitude = int.Parse(splitted[1]);
-                    order.Shop.Longitude = int.Parse(splitted[2]);
-                    order.Shop.StopAfter = int.Parse(splitted[4]);
-                    splitted = SplitInput(input);
-                    order.ShippingInfo = new ShippingInfo();
-                    order.ShippingInfo.guid = splitted[0];
-                    order.ShippingInfo.Latitude = int.Parse(splitted[1]);
-                    order.ShippingInfo.Longitude = int.Parse(splitted[2]);
-                    order.ShippingInfo.StopAfter = int.Parse(splitted[4]);
-                    orders.Add(order);
-                }
+                    guid = splitted[0],
+                    Latitude = int.Parse(splitted[1]),
+                    Longitude = int.Parse(splitted[2]),
+                    StopAfter = int.Parse(splitted[4]),
+                };
+
+                splitted = SplitInput(input);
+                order.ShippingInfo = new ShippingInfo()
+                {
+                    guid = splitted[0],
+                    Latitude = int.Parse(splitted[1]),
+                    Longitude = int.Parse(splitted[2]),
+                    StopAfter = int.Parse(splitted[4]),
+                };
+
+                orders.Add(order);
             }
         }
 

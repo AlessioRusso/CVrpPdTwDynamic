@@ -10,6 +10,8 @@ namespace CVrpPdTwDynamic.Models
         public long[,] Locations { get; private set; }
         public long[,] TimeWindows { get; private set; }
         public int[][] PickupsDeliveries { get; private set; }
+        public long ServiceTime { get; internal set; }
+
         public List<long> MaxDimension = new List<long>();
         public const int ServiceTimeSinglePickup = 1;
         public const int Infinite = 100000000;
@@ -65,7 +67,6 @@ namespace CVrpPdTwDynamic.Models
             List<long> vehicleCapacities = new List<long>();
             List<int> endTurns = new List<int>();
 
-
             int vehicleNumber = LogisticOpeartors.Count();
             int nodesNumber = Orders.Count();
             long[,] new_locations = new long[(vehicleNumber * 2) + (nodesNumber * 2) - past, 2];
@@ -74,8 +75,9 @@ namespace CVrpPdTwDynamic.Models
             List<int> Starts = new List<int>();
             List<int> Ends = new List<int>();
 
-            foreach (var (op, i) in LogisticOpeartors.Select((value, i) => (value, i)))
+            foreach (var op in LogisticOpeartors)
             {
+                var i = map.Forward[op.guid];
                 new_locations[i, 0] = (long)op.StartLocation.Coordinate.X;
                 new_locations[i, 1] = (long)op.StartLocation.Coordinate.Y;
                 new_tw[i, 0] = op.StartTime;
@@ -140,5 +142,5 @@ namespace CVrpPdTwDynamic.Models
             // First Run
             return new DataModel(vehicleNumber, demands, Starts, Ends, vehicleCapacities, cargo, endTurns, new_locations, new_tw, mapped_pd);
         }
-    };
+    }
 }

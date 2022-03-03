@@ -10,15 +10,14 @@ namespace CVrpPdTwDynamic.Utils
         public static int LocationsCurrentState(
                                         in DataModel data,
                                         ref List<Order> Orders,
-                                        in BiMap<string, int> map,
-                                        ref BiMap<string, int> map_new,
+                                        in BiMap<string, int> mapNode,
+                                        ref BiMap<string, int> CurrentmapNode,
                                         in BiMap<string, string> Pd_map,
                                         List<List<Tuple<string, long, long>>> solution_map,
                                         List<int> present,
                                         ref List<Order> ForcedDeliveries,
                                         ref List<Order> ForcedPickupDeliveries,
-                                        ref List<List<Tuple<string, string>>> pd_constraints,
-                                        ref List<Tuple<string, string>> Pd_new
+                                        ref List<Tuple<string, string>> PickupDeliveries
                                         )
         {
             int n_loc = 0;
@@ -33,14 +32,14 @@ namespace CVrpPdTwDynamic.Utils
                     {
                         Order order = new Order();
                         order.ShippingInfo = new ShippingInfo();
-                        order.ShippingInfo.Latitude = data.Locations[map.Forward[node], 0];
-                        order.ShippingInfo.Longitude = data.Locations[map.Forward[node], 1];
+                        order.ShippingInfo.Latitude = data.Locations[mapNode.Forward[node], 0];
+                        order.ShippingInfo.Longitude = data.Locations[mapNode.Forward[node], 1];
                         order.ShippingInfo.guid = node;
-                        order.ShippingInfo.StopAfter = data.TimeWindows[map.Forward[node], 0];
-                        order.ProductCount = -data.Demands[map.Forward[node]];
-                        order.ShippingInfo.guidRider = map.Reverse[i];
+                        order.ShippingInfo.StopAfter = data.TimeWindows[mapNode.Forward[node], 0];
+                        order.ProductCount = -data.Demands[mapNode.Forward[node]];
+                        order.ShippingInfo.guidRider = mapNode.Reverse[i];
                         order.ShippingInfo.Type = StopType.ForcedStop;
-                        map_new.Add(node, n_loc + data.vehicleNumber);
+                        CurrentmapNode.Add(node, n_loc + data.vehicleNumber);
                         n_loc++;
                         ForcedDeliveries.Add(order);
                         Orders.Add(order);
@@ -50,26 +49,26 @@ namespace CVrpPdTwDynamic.Utils
                         var pickup_node = Pd_map.Reverse[node];
                         Order order = new Order();
                         order.Shop = new Shop();
-                        order.Shop.Latitude = data.Locations[map.Forward[pickup_node], 0];
-                        order.Shop.Longitude = data.Locations[map.Forward[pickup_node], 1];
+                        order.Shop.Latitude = data.Locations[mapNode.Forward[pickup_node], 0];
+                        order.Shop.Longitude = data.Locations[mapNode.Forward[pickup_node], 1];
                         order.Shop.guid = pickup_node;
-                        order.Shop.StopAfter = data.TimeWindows[map.Forward[pickup_node], 0];
-                        order.ProductCount = data.Demands[map.Forward[pickup_node]];
-                        map_new.Add(pickup_node, n_loc + data.vehicleNumber);
+                        order.Shop.StopAfter = data.TimeWindows[mapNode.Forward[pickup_node], 0];
+                        order.ProductCount = data.Demands[mapNode.Forward[pickup_node]];
+                        CurrentmapNode.Add(pickup_node, n_loc + data.vehicleNumber);
                         n_loc++;
                         order.ShippingInfo = new ShippingInfo();
                         order.ShippingInfo.guid = node;
-                        order.ShippingInfo.Latitude = data.Locations[map.Forward[node], 0];
-                        order.ShippingInfo.Longitude = data.Locations[map.Forward[node], 1];
-                        order.ShippingInfo.StopAfter = data.TimeWindows[map.Forward[node], 0];
-                        order.ShippingInfo.guidRider = map.Reverse[i];
-                        map_new.Add(node, n_loc + data.vehicleNumber);
+                        order.ShippingInfo.Latitude = data.Locations[mapNode.Forward[node], 0];
+                        order.ShippingInfo.Longitude = data.Locations[mapNode.Forward[node], 1];
+                        order.ShippingInfo.StopAfter = data.TimeWindows[mapNode.Forward[node], 0];
+                        order.ShippingInfo.guidRider = mapNode.Reverse[i];
+                        CurrentmapNode.Add(node, n_loc + data.vehicleNumber);
                         n_loc++;
                         if (CheckOrders.isPresentPickUp(pickup_node, route, present[i]))
                         {
                             ForcedPickupDeliveries.Add(order);
                         }
-                        Pd_new.Add(Tuple.Create(pickup_node, node));
+                        PickupDeliveries.Add(Tuple.Create(pickup_node, node));
                         Orders.Add(order);
                     }
 
@@ -82,14 +81,14 @@ namespace CVrpPdTwDynamic.Utils
                                            in DataModel data,
                                            in List<Rider> PreviousLogisticOperators,
                                            ref List<Rider> CurrentLogisticOperators,
-                                           in BiMap<string, int> map,
+                                           in BiMap<string, int> mapNode,
                                            List<List<Tuple<string, long, long>>> solution_map,
                                            List<int> present
                                            )
         {
             foreach (var (route, i) in solution_map.Select((value, i) => (value, i)))
             {
-                var toIndex = map.Forward[route[present[i]].Item1];
+                var toIndex = mapNode.Forward[route[present[i]].Item1];
                 // park state
                 Rider op = new Rider();
                 op.Name = PreviousLogisticOperators[i].Name;
@@ -101,7 +100,7 @@ namespace CVrpPdTwDynamic.Utils
 
                 if (toIndex == data.Ends[i])
                 {
-                    var prevIndex = map.Forward[route[present[i] - 1].Item1];
+                    var prevIndex = mapNode.Forward[route[present[i] - 1].Item1];
 
                     op.StartLocation = new NetTopologySuite.Geometries.Point(data.Locations[prevIndex, 0], data.Locations[prevIndex, 1]);
                     op.StartTime = route[present[i] - 1].Item2 + op.DeliveryFixedFee;
@@ -124,7 +123,7 @@ namespace CVrpPdTwDynamic.Utils
                 long actualCargo = 0;
                 for (int j = 1; j < route.Count && j < present[i]; j++)
                 {
-                    actualCargo += data.Demands[map.Forward[route[j].Item1]];
+                    actualCargo += data.Demands[mapNode.Forward[route[j].Item1]];
                 }
                 CurrentLogisticOperators[i].Cargo = actualCargo;
             }
