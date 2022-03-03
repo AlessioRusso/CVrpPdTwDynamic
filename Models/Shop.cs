@@ -2,9 +2,12 @@ namespace CVrpPdTwDynamic.Models
 {
     public class Shop : RiderStopInfo
     {
-        Shop() { }
+        public Shop()
+        {
+            Type = StopType.Pickup;
+        }
 
         public System.Guid ShopId;
-        public override StopType Type => StopType.Pickup;
+        public override StopType Type { get; set; }
     }
 }

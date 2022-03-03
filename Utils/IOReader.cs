@@ -5,6 +5,8 @@ namespace CVrpPdTwDynamic.Utils
 {
     public class IOReader
     {
+
+
         public static string[] SplitInput(StreamReader input)
         {
             string? line = input.ReadLine();
@@ -14,69 +16,37 @@ namespace CVrpPdTwDynamic.Utils
 
 
         // The input files follow the "Li & Lim" format
-        public static void ReadStandardInput(string fileName, ref List<long> demands,
-                              ref long[,] Locations, ref long[,] tw, ref List<Tuple<string, string>> Pd,
-                              ref BiMap<string, int> map)
+        public static void ReadOrders(string fileName, ref List<Order> orders)
         {
-
-
             using (StreamReader input = new StreamReader(fileName))
             {
-                List<Tuple<int, int>> coordinates = new List<Tuple<int, int>>();
-                List<Tuple<int, int>> times = new List<Tuple<int, int>>();
-
-
-                // read first row
                 string[] splitted;
                 splitted = SplitInput(input);
-                int n = int.Parse(splitted[0]);
 
                 // start reading locations
-                int n_loc = 0;
                 while (!input.EndOfStream)
                 {
                     splitted = SplitInput(input);
-
-                    if (splitted.Length < 9) break;
-                    map.Add(splitted[0], n + n_loc);
-                    n_loc++;
-                    coordinates.Add(new Tuple<int, int>(int.Parse(splitted[1]), int.Parse(splitted[2])));
-                    demands.Add(int.Parse(splitted[3]));
-                    times.Add(new Tuple<int, int>(int.Parse(splitted[4]), int.Parse(splitted[5])));
-                    if (splitted[7] == "-")
-                    {
-                        Pd.Add(new Tuple<string, string>(splitted[0], splitted[8]));
-                    }
+                    Order order = new Order();
+                    order.Shop = new Shop();
+                    order.Shop.guid = splitted[0];
+                    order.ProductCount = (int.Parse(splitted[3]));
+                    order.Shop.Latitude = int.Parse(splitted[1]);
+                    order.Shop.Longitude = int.Parse(splitted[2]);
+                    order.Shop.StopAfter = int.Parse(splitted[4]);
+                    splitted = SplitInput(input);
+                    order.ShippingInfo = new ShippingInfo();
+                    order.ShippingInfo.guid = splitted[0];
+                    order.ShippingInfo.Latitude = int.Parse(splitted[1]);
+                    order.ShippingInfo.Longitude = int.Parse(splitted[2]);
+                    order.ShippingInfo.StopAfter = int.Parse(splitted[4]);
+                    orders.Add(order);
                 }
-
-                // initialize time windows and locations
-                int n_nodes = coordinates.Count;
-                Locations = new long[n_nodes, 2];
-                tw = new long[n_nodes, 2];
-                int j = 0;
-
-                // build locations 
-                foreach (var pair in coordinates)
-                {
-                    Locations[j, 0] = pair.Item1;
-                    Locations[j, 1] = pair.Item2;
-                    j++;
-                }
-
-                // build time windows
-                j = 0;
-                foreach (var pair in times)
-                {
-                    tw[j, 0] = pair.Item1;
-                    tw[j, 1] = pair.Item2;
-                    j++;
-                }
-
             }
         }
 
         // The input files follow the "Li & Lim" format
-        public static void ReadRiderInput(string fileName,
+        public static void ReadRider(string fileName,
                                           ref List<Rider> LogisticOperators
                                         )
         {
@@ -94,7 +64,6 @@ namespace CVrpPdTwDynamic.Utils
                 {
                     splitted = SplitInput(input);
                     Rider op = new Rider();
-                    if (splitted.Length < 7) break;
                     op.StartLocation = new NetTopologySuite.Geometries.Point(int.Parse(splitted[1]), int.Parse(splitted[2]));
                     op.Capacity = int.Parse(splitted[5]);
                     op.StartTime = int.Parse(splitted[3]);

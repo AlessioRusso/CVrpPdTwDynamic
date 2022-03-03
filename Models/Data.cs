@@ -52,11 +52,11 @@ namespace CVrpPdTwDynamic.Models
 
 
         static public DataModel BuildDataModel(
-                                                List<Rider> LogisticOpeartors, long[,] locations,
-                                                long[,] tw,
-                                                List<long> demandOrders,
+                                                List<Rider> LogisticOpeartors,
+                                                List<Order> Orders,
                                                 List<Tuple<string, string>> Pd,
-                                                ref BiMap<string, int> map
+                                                ref BiMap<string, int> map,
+                                                int past
         )
 
         {
@@ -67,8 +67,9 @@ namespace CVrpPdTwDynamic.Models
 
 
             int vehicleNumber = LogisticOpeartors.Count();
-            long[,] new_locations = new long[(vehicleNumber * 2) + locations.GetLength(0), 2];
-            long[,] new_tw = new long[(vehicleNumber * 2) + tw.GetLength(0), 2];
+            int nodesNumber = Orders.Count();
+            long[,] new_locations = new long[(vehicleNumber * 2) + (nodesNumber * 2) - past, 2];
+            long[,] new_tw = new long[(vehicleNumber * 2) + (nodesNumber * 2) - past, 2];
 
             List<int> Starts = new List<int>();
             List<int> Ends = new List<int>();
@@ -86,20 +87,34 @@ namespace CVrpPdTwDynamic.Models
                 endTurns.Add(op.EndTurn);
             }
 
-            for (int i = 0; i < locations.GetLength(0); i++)
+            int nodes = 0;
+            foreach (var order in Orders)
             {
-                //   if (locations[i, 0] != 0 & locations[i, 1] != 0)
-                // {
-                new_locations[i + vehicleNumber, 0] = locations[i, 0];
-                new_locations[i + vehicleNumber, 1] = locations[i, 1];
-                new_tw[i + vehicleNumber, 0] = tw[i, 0];
-                new_tw[i + vehicleNumber, 1] = tw[i, 1];
-                //  }
+                if (order.ShippingInfo.Type == StopType.Delivery)
+                {
+                    new_locations[nodes + vehicleNumber, 0] = order.Shop.Latitude;
+                    new_locations[nodes + vehicleNumber, 1] = order.Shop.Longitude;
+                    new_tw[nodes + vehicleNumber, 0] = order.Shop.StopAfter;
+                    new_tw[nodes + vehicleNumber, 1] = order.Shop.StopBefore;
+                    demands.Add(order.ProductCount);
+                    nodes++;
+                    new_locations[nodes + vehicleNumber, 0] = order.ShippingInfo.Latitude;
+                    new_locations[nodes + vehicleNumber, 1] = order.ShippingInfo.Longitude;
+                    new_tw[nodes + vehicleNumber, 0] = order.ShippingInfo.StopAfter;
+                    new_tw[nodes + vehicleNumber, 1] = order.ShippingInfo.StopBefore;
+                    demands.Add(-order.ProductCount);
+                    nodes++;
+                }
+                else
+                {
+                    new_locations[nodes + vehicleNumber, 0] = order.ShippingInfo.Latitude;
+                    new_locations[nodes + vehicleNumber, 1] = order.ShippingInfo.Longitude;
+                    new_tw[nodes + vehicleNumber, 0] = order.ShippingInfo.StopAfter;
+                    new_tw[nodes + vehicleNumber, 1] = order.ShippingInfo.StopBefore;
+                    demands.Add(-order.ProductCount);
+                    nodes++;
+                }
             }
-
-            // add demands Order
-            foreach (var d in demandOrders)
-                demands.Add(d);
 
             int[][] mapped_pd = new int[Pd.Count][];
             int n_pair = 0;
@@ -110,7 +125,7 @@ namespace CVrpPdTwDynamic.Models
             }
 
             // Add park
-            int j = vehicleNumber + locations.GetLength(0);
+            int j = vehicleNumber + (nodesNumber * 2) - past;
             foreach (var (op, index) in LogisticOpeartors.Select((value, index) => (value, index)))
             {
                 demands.Add(0);
@@ -119,7 +134,7 @@ namespace CVrpPdTwDynamic.Models
                 new_tw[j + index, 0] = op.EndTurn;
                 new_tw[j + index, 1] = Infinite;
                 Ends.Add(j + index);
-                map.Add($"park{index}", j + index);
+                map.Add($"park{index + 1}", j + index);
             }
 
             // First Run

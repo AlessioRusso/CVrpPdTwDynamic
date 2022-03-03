@@ -9,16 +9,14 @@ namespace CVrpPdTwDynamic.Utils
 
         public static int LocationsCurrentState(
                                         in DataModel data,
-                                        ref long[,] locations_new,
-                                        ref long[,] tw_new,
-                                        ref List<long> demands_new,
+                                        ref List<Order> Orders,
                                         in BiMap<string, int> map,
                                         ref BiMap<string, int> map_new,
                                         in BiMap<string, string> Pd_map,
-
                                         List<List<Tuple<string, long, long>>> solution_map,
                                         List<int> present,
-                                        ref List<List<string>> started_deliveries,
+                                        ref List<Order> ForcedDeliveries,
+                                        ref List<Order> ForcedPickupDeliveries,
                                         ref List<List<Tuple<string, string>>> pd_constraints,
                                         ref List<Tuple<string, string>> Pd_new
                                         )
@@ -26,54 +24,58 @@ namespace CVrpPdTwDynamic.Utils
             int n_loc = 0;
             foreach (var (route, i) in solution_map.Select((value, i) => (value, i)))
             {
-                List<string> single_delivery = new List<string>();
-                List<Tuple<string, string>> pick_delivery_constraint = new List<Tuple<string, string>>();
+
 
                 for (int j = route.Count - 1; j >= present[i]; j--)
                 {
                     var node = route[j].Item1;
                     if (CheckOrders.isDeliveryIsPastPickUp(node, route, Pd_map, present[i]))
                     {
-                        locations_new[n_loc, 0] = data.Locations[map.Forward[node], 0];
-                        locations_new[n_loc, 1] = data.Locations[map.Forward[node], 1];
-                        tw_new[n_loc, 0] = data.TimeWindows[map.Forward[node], 0];
-                        tw_new[n_loc, 1] = data.TimeWindows[map.Forward[node], 1];
-                        demands_new.Add(data.Demands[map.Forward[node]]);
+                        Order order = new Order();
+                        order.ShippingInfo = new ShippingInfo();
+                        order.ShippingInfo.Latitude = data.Locations[map.Forward[node], 0];
+                        order.ShippingInfo.Longitude = data.Locations[map.Forward[node], 1];
+                        order.ShippingInfo.guid = node;
+                        order.ShippingInfo.StopAfter = data.TimeWindows[map.Forward[node], 0];
+                        order.ProductCount = -data.Demands[map.Forward[node]];
+                        order.ShippingInfo.guidRider = map.Reverse[i];
+                        order.ShippingInfo.Type = StopType.ForcedStop;
                         map_new.Add(node, n_loc + data.vehicleNumber);
                         n_loc++;
-                        single_delivery.Add(node);
+                        ForcedDeliveries.Add(order);
+                        Orders.Add(order);
                     }
                     else if (CheckOrders.isDeliveryIsFuturePickUp(node, route, Pd_map, present[i]))
                     {
                         var pickup_node = Pd_map.Reverse[node];
-                        locations_new[n_loc, 0] = data.Locations[map.Forward[pickup_node], 0];
-                        locations_new[n_loc, 1] = data.Locations[map.Forward[pickup_node], 1];
-                        tw_new[n_loc, 0] = data.TimeWindows[map.Forward[pickup_node], 0];
-                        tw_new[n_loc, 1] = data.TimeWindows[map.Forward[pickup_node], 1];
-                        demands_new.Add(data.Demands[map.Forward[pickup_node]]);
+                        Order order = new Order();
+                        order.Shop = new Shop();
+                        order.Shop.Latitude = data.Locations[map.Forward[pickup_node], 0];
+                        order.Shop.Longitude = data.Locations[map.Forward[pickup_node], 1];
+                        order.Shop.guid = pickup_node;
+                        order.Shop.StopAfter = data.TimeWindows[map.Forward[pickup_node], 0];
+                        order.ProductCount = data.Demands[map.Forward[pickup_node]];
                         map_new.Add(pickup_node, n_loc + data.vehicleNumber);
                         n_loc++;
-                        locations_new[n_loc, 0] = data.Locations[map.Forward[node], 0];
-                        locations_new[n_loc, 1] = data.Locations[map.Forward[node], 1];
-                        tw_new[n_loc, 0] = data.TimeWindows[map.Forward[node], 0];
-                        tw_new[n_loc, 1] = data.TimeWindows[map.Forward[node], 1];
-                        demands_new.Add(data.Demands[map.Forward[node]]);
+                        order.ShippingInfo = new ShippingInfo();
+                        order.ShippingInfo.guid = node;
+                        order.ShippingInfo.Latitude = data.Locations[map.Forward[node], 0];
+                        order.ShippingInfo.Longitude = data.Locations[map.Forward[node], 1];
+                        order.ShippingInfo.StopAfter = data.TimeWindows[map.Forward[node], 0];
+                        order.ShippingInfo.guidRider = map.Reverse[i];
                         map_new.Add(node, n_loc + data.vehicleNumber);
                         n_loc++;
                         if (CheckOrders.isPresentPickUp(pickup_node, route, present[i]))
                         {
-                            pick_delivery_constraint.Add(Tuple.Create(pickup_node, node));
+                            ForcedPickupDeliveries.Add(order);
                         }
                         Pd_new.Add(Tuple.Create(pickup_node, node));
+                        Orders.Add(order);
                     }
 
                 }
-                started_deliveries.Add(single_delivery);
-                pd_constraints.Add(pick_delivery_constraint);
             }
             return n_loc;
-
-
         }
 
         public static void RiderCurrentState(

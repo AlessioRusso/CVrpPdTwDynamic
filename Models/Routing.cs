@@ -11,8 +11,8 @@ namespace CVrpPdTwDynamic.Models
                                            DataModel data,
                                            long[,] costMatrix,
                                            List<Rider> LogisticOperators,
-                                           List<List<string>>? started_deliveries,
-                                           List<List<Tuple<string, string>>>? pd_constraints,
+                                           List<Order>? ForcedDelivery,
+                                           List<Order>? ForcedPickupDeliveries,
                                            BiMap<string, int>? map
                                            )
         {
@@ -54,10 +54,13 @@ namespace CVrpPdTwDynamic.Models
                             return ((long)op.DeliveryFixedFee * op.Vehicle) + costMatrix[fromNode, toNode];
 
                         // from delivery (past pickup) to somewhere else 
-                        for (int z = 0; started_deliveries != null && z < started_deliveries[index].Count; z++)
+                        if (ForcedDelivery != null)
                         {
-                            if (fromNode == map.Forward[started_deliveries[index][z]] && costMatrix[fromNode, toNode] > 0)
-                                return ((long)op.DeliveryFixedFee * op.Vehicle) + costMatrix[fromNode, toNode];
+                            foreach (var forced in ForcedDelivery)
+                            {
+                                if (fromNode == map.Forward[forced.ShippingInfo.guid] && op.guid.Equals(forced.ShippingInfo.guidRider) && costMatrix[fromNode, toNode] > 0)
+                                    return ((long)op.DeliveryFixedFee * op.Vehicle) + costMatrix[fromNode, toNode];
+                            }
                         }
                     }
                     return costMatrix[fromNode, toNode];
@@ -117,13 +120,15 @@ namespace CVrpPdTwDynamic.Models
                             return (long)((costMatrix[fromNode, toNode] / op.Vehicle)
                                         + data.delivery_service_time);
                         }
-
-                        // from delivery (past pickup) to somewhere else 
-                        for (int p = 0; started_deliveries != null && p < started_deliveries[index].Count; p++)
+                        if (ForcedDelivery != null)
                         {
-                            if (fromNode == map.Forward[started_deliveries[index][p]] && costMatrix[fromNode, toNode] > 0)
-                                return (long)((costMatrix[fromNode, toNode] / op.Vehicle)
-                                            + data.delivery_service_time);
+                            // from delivery (past pickup) to somewhere else 
+                            foreach (var forced in ForcedDelivery)
+                            {
+                                if (fromNode == map.Forward[forced.ShippingInfo.guid] && costMatrix[fromNode, toNode] > 0 && op.guid.Equals(forced.ShippingInfo.guidRider))
+                                    return (long)((costMatrix[fromNode, toNode] / op.Vehicle)
+                                                + data.delivery_service_time);
+                            }
                         }
 
 
@@ -180,28 +185,21 @@ namespace CVrpPdTwDynamic.Models
                 routing.AddVariableMinimizedByFinalizer(timeDimension.CumulVar(deliveryIndex));
             }
 
-            if (started_deliveries != null)
+            if (ForcedDelivery != null)
             {
-                foreach (var (deliveriesRider, i) in started_deliveries.Select((value, i) => (value, i)))
+                foreach (var forced in ForcedDelivery)
                 {
-                    foreach (var delivery in deliveriesRider)
-                    {
-                        routing.VehicleVar(manager.NodeToIndex(map.Forward[delivery])).SetValue(i);
-                    }
+                    routing.VehicleVar(manager.NodeToIndex(map.Forward[forced.ShippingInfo.guid])).SetValue(map.Forward[forced.ShippingInfo.guidRider]);
                 }
             }
 
-            if (pd_constraints != null)
+            if (ForcedPickupDeliveries != null)
             {
-                foreach (var (ordersRider, i) in pd_constraints.Select((value, i) => (value, i)))
+                foreach (var order in ForcedPickupDeliveries)
                 {
-                    foreach (var tuple in ordersRider)
-                    {
-                        routing.VehicleVar(manager.NodeToIndex(map.Forward[tuple.Item1])).SetValue(i);
-                    }
+                    routing.VehicleVar(manager.NodeToIndex(map.Forward[order.Shop.guid])).SetValue(map.Forward[order.ShippingInfo.guidRider]);
                 }
             }
-
             return routing;
         }
 
