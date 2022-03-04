@@ -3,144 +3,68 @@ namespace CVrpPdTwDynamic.Models
 {
     public class DataModel
     {
-        public int vehicleNumber { get; private set; }
-        public long[] vehicleCapacities { get; private set; }
-        public long[] Cargo { get; private set; }
-        public long[] Demands { get; private set; }
-        public long[,] Locations { get; private set; }
-        public long[,] TimeWindows { get; private set; }
-        public int[][] PickupsDeliveries { get; private set; }
-        public long ServiceTime { get; internal set; }
 
         public List<long> MaxDimension = new List<long>();
-        public const int ServiceTimeSinglePickup = 1;
         public const int Infinite = 100000000;
-        public const int Penalty = 3;
-        public int pick_service_time = 5;
-        public int delivery_service_time = 1;
-        public int[] Starts = { };
-        public int[] Ends = { };
-        public int[] endTurns = { };
+        public List<int> Starts;
+        public List<int> Ends;
+        public List<Rider> LogisticOperators;
+        public List<Order> OrdersAndForced;
+        public Dictionary<string, int>? riderMap;
+        public BiMap<INodeInfo, int> nodeMap;
 
-        public DataModel(int vehicleNumber,
-                        List<long> Demands,
-                        List<int> Starts,
-                        List<int> Ends,
-                        List<long> vehicleCapacities,
-                        List<long> Cargo,
-                        List<int> endTurns,
-                        long[,] loc,
-                        long[,] tw,
-                        int[][] pickDel
-                    )
+
+        public DataModel(List<Rider> LogisticOperators, List<Order> OrdersAndForced)
         {
-            this.vehicleNumber = vehicleNumber;
-            this.Demands = Demands.ToArray();
-            this.Starts = Starts.ToArray();
-            this.Ends = Ends.ToArray();
-            this.vehicleCapacities = vehicleCapacities.ToArray();
-            this.Cargo = Cargo.ToArray();
+            this.Starts = new List<int>();
+            this.Ends = new List<int>();
 
-            this.endTurns = endTurns.ToArray();
-            this.Locations = loc;
-            this.TimeWindows = tw;
-            this.PickupsDeliveries = pickDel;
+            this.LogisticOperators = LogisticOperators;
+            this.OrdersAndForced = OrdersAndForced;
+            this.riderMap = LogisticOperators
+              .Select((op, i) => (op.guid, i))
+              .ToDictionary(pair => pair.guid, pair => pair.i);
+            this.Starts = riderMap.Select((pair) => pair.Value).ToList();
 
-            for (int i = 0; i < this.vehicleNumber; i++)
+            this.nodeMap = new BiMap<INodeInfo, int>();
+            foreach (var rider in LogisticOperators)
             {
+                var startNode = new StartInfo();
+                startNode.guid = rider.guid;
+                startNode.Latitude = (long)rider.StartLocation.Coordinate.X;
+                startNode.Longitude = (long)rider.StartLocation.Coordinate.Y;
+                startNode.DelayPenalty = DataModel.Infinite;
+                startNode.StopAfter = rider.StartTime;
+                startNode.Demand = 0;
+                this.nodeMap.Add(startNode, this.riderMap[startNode.guid]);
                 this.MaxDimension.Add(DataModel.Infinite);
             }
-        }
 
-
-        static public DataModel BuildDataModel(
-                                                List<Rider> LogisticOpeartors,
-                                                List<Order> Orders,
-                                                List<Tuple<string, string>> Pd,
-                                                ref BiMap<string, int> map,
-                                                int past
-        )
-
-        {
-            List<long> demands = new List<long>();
-            List<long> cargo = new List<long>();
-            List<long> vehicleCapacities = new List<long>();
-            List<int> endTurns = new List<int>();
-
-            int vehicleNumber = LogisticOpeartors.Count();
-            int nodesNumber = Orders.Count();
-            long[,] new_locations = new long[(vehicleNumber * 2) + (nodesNumber * 2) - past, 2];
-            long[,] new_tw = new long[(vehicleNumber * 2) + (nodesNumber * 2) - past, 2];
-
-            List<int> Starts = new List<int>();
-            List<int> Ends = new List<int>();
-
-            foreach (var op in LogisticOpeartors)
+            foreach (var order in this.OrdersAndForced)
             {
-                var i = map.Forward[op.guid];
-                new_locations[i, 0] = (long)op.StartLocation.Coordinate.X;
-                new_locations[i, 1] = (long)op.StartLocation.Coordinate.Y;
-                new_tw[i, 0] = op.StartTime;
-                new_tw[i, 1] = op.EndTime;
-                vehicleCapacities.Add(op.Capacity);
-                Starts.Add(i);
-                demands.Add(0);
-                cargo.Add(op.Cargo);
-                endTurns.Add(op.EndTurn);
-            }
-
-            int nodes = 0;
-            foreach (var order in Orders)
-            {
-                if (order.ShippingInfo.Type == StopType.Delivery)
-                {
-                    new_locations[nodes + vehicleNumber, 0] = order.Shop.Latitude;
-                    new_locations[nodes + vehicleNumber, 1] = order.Shop.Longitude;
-                    new_tw[nodes + vehicleNumber, 0] = order.Shop.StopAfter;
-                    new_tw[nodes + vehicleNumber, 1] = order.Shop.StopBefore;
-                    demands.Add(order.ProductCount);
-                    nodes++;
-                    new_locations[nodes + vehicleNumber, 0] = order.ShippingInfo.Latitude;
-                    new_locations[nodes + vehicleNumber, 1] = order.ShippingInfo.Longitude;
-                    new_tw[nodes + vehicleNumber, 0] = order.ShippingInfo.StopAfter;
-                    new_tw[nodes + vehicleNumber, 1] = order.ShippingInfo.StopBefore;
-                    demands.Add(-order.ProductCount);
-                    nodes++;
-                }
+                if (order.ShippingInfo.Type == StopType.ForcedStop)
+                    this.nodeMap.Add(order.ShippingInfo, this.nodeMap.Count());
                 else
                 {
-                    new_locations[nodes + vehicleNumber, 0] = order.ShippingInfo.Latitude;
-                    new_locations[nodes + vehicleNumber, 1] = order.ShippingInfo.Longitude;
-                    new_tw[nodes + vehicleNumber, 0] = order.ShippingInfo.StopAfter;
-                    new_tw[nodes + vehicleNumber, 1] = order.ShippingInfo.StopBefore;
-                    demands.Add(-order.ProductCount);
-                    nodes++;
+                    this.nodeMap.Add(order.Shop, this.nodeMap.Count());
+                    this.nodeMap.Add(order.ShippingInfo, this.nodeMap.Count());
                 }
             }
 
-            int[][] mapped_pd = new int[Pd.Count][];
-            int n_pair = 0;
-            foreach (var pair in Pd)
+            foreach (var rider in LogisticOperators)
             {
-                mapped_pd[n_pair] = new int[] { map.Forward[pair.Item1], map.Forward[pair.Item2] };
-                n_pair++;
+                var endNode = new IdleInfo();
+                endNode.guid = rider.guid;
+                endNode.Latitude = (long)rider.StartLocation.Coordinate.X;
+                endNode.Longitude = (long)rider.StartLocation.Coordinate.Y;
+                endNode.DelayPenalty = DataModel.Infinite;
+                endNode.Demand = 0;
+                endNode.StopAfter = rider.EndTurn;
+                this.Ends.Add(this.nodeMap.Count());
+                this.nodeMap.Add(endNode, this.nodeMap.Count());
             }
 
-            // Add park
-            int j = vehicleNumber + (nodesNumber * 2) - past;
-            foreach (var (op, index) in LogisticOpeartors.Select((value, index) => (value, index)))
-            {
-                demands.Add(0);
-                new_locations[j + index, 0] = 0;
-                new_locations[j + index, 1] = 0;
-                new_tw[j + index, 0] = op.EndTurn;
-                new_tw[j + index, 1] = Infinite;
-                Ends.Add(j + index);
-                map.Add($"park{index + 1}", j + index);
-            }
-
-            // First Run
-            return new DataModel(vehicleNumber, demands, Starts, Ends, vehicleCapacities, cargo, endTurns, new_locations, new_tw, mapped_pd);
         }
+
     }
 }

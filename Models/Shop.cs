@@ -6,7 +6,6 @@ namespace CVrpPdTwDynamic.Models
         {
             Type = StopType.Pickup;
         }
-
         public System.Guid ShopId;
         public override StopType Type { get; set; }
         public long SinglePickupServiceTime { get; set; }

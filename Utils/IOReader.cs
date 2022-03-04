@@ -40,6 +40,9 @@ namespace CVrpPdTwDynamic.Utils
                     Latitude = int.Parse(splitted[1]),
                     Longitude = int.Parse(splitted[2]),
                     StopAfter = int.Parse(splitted[4]),
+                    DelayPenalty = 4,
+                    BaseServiceTime = 1,
+                    Demand = order.ProductCount,
                 };
 
                 splitted = SplitInput(input);
@@ -49,6 +52,8 @@ namespace CVrpPdTwDynamic.Utils
                     Latitude = int.Parse(splitted[1]),
                     Longitude = int.Parse(splitted[2]),
                     StopAfter = int.Parse(splitted[4]),
+                    DelayPenalty = 4,
+                    Demand = -order.ProductCount,
                 };
 
                 orders.Add(order);

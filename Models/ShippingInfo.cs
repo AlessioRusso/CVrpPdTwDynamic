@@ -5,14 +5,8 @@ namespace CVrpPdTwDynamic.Models
         Pickup,
         Delivery,
         ForcedStop,
-    }
-
-    public interface INodeInfo : IRoutableLocation
-    {
-        public long StopAfter { get; }
-        public long StopBefore { get; }
-        public long DelayPenalty { get; }
-        public long Demand { get; }
+        Start,
+        Idle,
     }
 
     public interface IMapRouter
@@ -32,9 +26,11 @@ namespace CVrpPdTwDynamic.Models
 
         public long GetDuration(Rider op, IRoutableLocation from, IRoutableLocation to)
         {
-            return op.Vehicle * GetDistance(op, from, to);
+            return GetDistance(op, from, to) / op.Vehicle;
         }
     }
+
+
 
     public interface IRoutableLocation
     {
@@ -43,15 +39,28 @@ namespace CVrpPdTwDynamic.Models
         public long Longitude { get; }
     }
 
+
+    public interface INodeInfo : IRoutableLocation
+    {
+        public long StopAfter { get; }
+        public long StopBefore { get; }
+        public long DelayPenalty { get; }
+        public long Demand { get; }
+
+    }
+
     public abstract class RiderStopInfo : INodeInfo
     {
         public string guid { get; set; } = null!;
-        public string Name { get; set; } = null!;
-        public long StopAfter { get; set; }
-        public long StopBefore => StopAfter + 24 * 60 * 60;
         public long Latitude { get; set; }
         public long Longitude { get; set; }
+        public long StopAfter { get; set; }
+        public long StopBefore => StopAfter + 24 * 60 * 60;
+        public long DelayPenalty { get; set; }
+        public long Demand { get; set; }
+        public string Name { get; set; } = null!;
         public abstract StopType Type { get; set; }
+
     }
 
     public class ShippingInfo : RiderStopInfo
@@ -60,5 +69,17 @@ namespace CVrpPdTwDynamic.Models
         public string? guidRider;
         public override StopType Type { get; set; } = StopType.Delivery;
         public long ServiceTime { get; internal set; }
+    }
+
+    public class StartInfo : RiderStopInfo
+    {
+        public string? guidRider;
+        public override StopType Type { get; set; } = StopType.Start;
+    }
+
+    public class IdleInfo : RiderStopInfo
+    {
+        public string? guidRider;
+        public override StopType Type { get; set; } = StopType.Idle;
     }
 }

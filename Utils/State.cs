@@ -6,6 +6,7 @@ namespace CVrpPdTwDynamic.Utils
 {
     public class State
     {
+        /*
 
         public static int LocationsCurrentState(
                                         in DataModel data,
@@ -128,6 +129,6 @@ namespace CVrpPdTwDynamic.Utils
                 CurrentLogisticOperators[i].Cargo = actualCargo;
             }
 
-        }
+        }*/
     }
 }

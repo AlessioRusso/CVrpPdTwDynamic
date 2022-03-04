@@ -26,5 +26,6 @@ namespace CVrpPdTwDynamic.Models
         public long EndTime; // time windows
         public int EndTurn; // park node (endTurn, infinite) 
         public long Vehicle;
+        public string? forcedNode { get; set; } = null!;
     }
 }
