@@ -2,11 +2,8 @@ namespace CVrpPdTwDynamic.Models
 {
     public enum StopType
     {
-        Pickup,
         Delivery,
         ForcedStop,
-        Start,
-        Idle,
     }
 
     public interface IMapRouter
@@ -47,6 +44,7 @@ namespace CVrpPdTwDynamic.Models
         public long DelayPenalty { get; }
         public long Demand { get; }
 
+        public (long, long) PlannedStop { get; set; }
     }
 
     public abstract class RiderStopInfo : INodeInfo
@@ -59,27 +57,24 @@ namespace CVrpPdTwDynamic.Models
         public long DelayPenalty { get; set; }
         public long Demand { get; set; }
         public string Name { get; set; } = null!;
-        public abstract StopType Type { get; set; }
-
+        public (long, long) PlannedStop { get; set; }
     }
 
-    public class ShippingInfo : RiderStopInfo
+    public class Delivery : RiderStopInfo
     {
         public System.Guid BuyerId;
         public string? guidRider;
-        public override StopType Type { get; set; } = StopType.Delivery;
+        public StopType Type { get; set; } = StopType.Delivery;
         public long ServiceTime { get; internal set; }
     }
 
-    public class StartInfo : RiderStopInfo
+    public class Start : RiderStopInfo
     {
-        public string? guidRider;
-        public override StopType Type { get; set; } = StopType.Start;
+        public string guidRider;
     }
 
-    public class IdleInfo : RiderStopInfo
+    public class Idle : RiderStopInfo
     {
-        public string? guidRider;
-        public override StopType Type { get; set; } = StopType.Idle;
+        public string guidRider;
     }
 }

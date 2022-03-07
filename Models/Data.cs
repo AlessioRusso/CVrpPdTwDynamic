@@ -10,35 +10,22 @@ namespace CVrpPdTwDynamic.Models
         public List<int> Ends;
         public List<Rider> LogisticOperators;
         public List<Order> OrdersAndForced;
-        public Dictionary<string, int>? riderMap;
+        public Dictionary<string, int> riderMap;
         public BiMap<INodeInfo, int> nodeMap;
-
+        public Dictionary<string, int> vehicleMap;
 
         public DataModel(List<Rider> LogisticOperators, List<Order> OrdersAndForced)
         {
             this.Starts = new List<int>();
             this.Ends = new List<int>();
+            this.nodeMap = new BiMap<INodeInfo, int>();
+            this.riderMap = new Dictionary<string, int>();
+            this.vehicleMap = new Dictionary<string, int>();
+
 
             this.LogisticOperators = LogisticOperators;
             this.OrdersAndForced = OrdersAndForced;
-            this.riderMap = LogisticOperators
-              .Select((op, i) => (op.guid, i))
-              .ToDictionary(pair => pair.guid, pair => pair.i);
-            this.Starts = riderMap.Select((pair) => pair.Value).ToList();
-
-            this.nodeMap = new BiMap<INodeInfo, int>();
-            foreach (var rider in LogisticOperators)
-            {
-                var startNode = new StartInfo();
-                startNode.guid = rider.guid;
-                startNode.Latitude = (long)rider.StartLocation.Coordinate.X;
-                startNode.Longitude = (long)rider.StartLocation.Coordinate.Y;
-                startNode.DelayPenalty = DataModel.Infinite;
-                startNode.StopAfter = rider.StartTime;
-                startNode.Demand = 0;
-                this.nodeMap.Add(startNode, this.riderMap[startNode.guid]);
-                this.MaxDimension.Add(DataModel.Infinite);
-            }
+            this.Starts = new List<int>();
 
             foreach (var order in this.OrdersAndForced)
             {
@@ -53,18 +40,40 @@ namespace CVrpPdTwDynamic.Models
 
             foreach (var rider in LogisticOperators)
             {
-                var endNode = new IdleInfo();
-                endNode.guid = rider.guid;
-                endNode.Latitude = (long)rider.StartLocation.Coordinate.X;
-                endNode.Longitude = (long)rider.StartLocation.Coordinate.Y;
-                endNode.DelayPenalty = DataModel.Infinite;
-                endNode.Demand = 0;
-                endNode.StopAfter = rider.EndTurn;
+                var startNode = new Start()
+                {
+                    guid = rider.guid,
+                    guidRider = rider.guid,
+                    Latitude = (long)rider.StartLocation.Coordinate.X,
+                    Longitude = (long)rider.StartLocation.Coordinate.Y,
+                    DelayPenalty = DataModel.Infinite,
+                    StopAfter = rider.StartTime,
+                    Demand = 0,
+                };
+                this.Starts.Add(this.nodeMap.Count());
+                this.riderMap.Add(rider.guid, this.nodeMap.Count());
+                this.nodeMap.Add(startNode, this.nodeMap.Count());
+                this.vehicleMap.Add(rider.guid, this.vehicleMap.Count());
+                this.MaxDimension.Add(DataModel.Infinite);
+            }
+
+            foreach (var rider in LogisticOperators)
+            {
+                var endNode = new Idle()
+                {
+                    guid = "idle" + " " + rider.Name,
+                    Latitude = 0,
+                    Longitude = 0,
+                    DelayPenalty = DataModel.Infinite,
+                    Demand = 0,
+                    StopAfter = rider.EndTurn,
+                    guidRider = rider.guid,
+                };
                 this.Ends.Add(this.nodeMap.Count());
                 this.nodeMap.Add(endNode, this.nodeMap.Count());
             }
 
-        }
 
+        }
     }
 }

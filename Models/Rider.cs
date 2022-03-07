@@ -19,13 +19,13 @@ namespace CVrpPdTwDynamic.Models
         public double KilometricFee { get; set; }
         public long DeliveryFixedFee { get; set; } // cost delivery
         public long PickupFixedFee { get; set; } // cost delivery
-        public long Capacity;
+        public long Capacity { get; set; }
         public long Cargo;
         public Point StartLocation { get; set; } = null!;// latitude, longitude
         public long StartTime; // time windows
         public long EndTime; // time windows
         public int EndTurn; // park node (endTurn, infinite) 
         public long Vehicle;
-        public string? forcedNode { get; set; } = null!;
+        public string? forcedNextNode { get; set; } = null!;
     }
 }

@@ -4,7 +4,7 @@ namespace CVrpPdTwDynamic.Models
     {
         public Guid id;
         public long ProductCount { get; set; }
-        public Shop Shop { get; set; } = null!;
-        public ShippingInfo ShippingInfo { get; set; } = null!;
+        public Pickup Shop { get; set; } = null!;
+        public Delivery ShippingInfo { get; set; } = null!;
     }
 }

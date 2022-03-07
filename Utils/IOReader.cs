@@ -5,8 +5,6 @@ namespace CVrpPdTwDynamic.Utils
 {
     public class IOReader
     {
-
-
         public static string[] SplitInput(StreamReader input)
         {
             string? line = input.ReadLine();
@@ -21,7 +19,6 @@ namespace CVrpPdTwDynamic.Utils
             return orders;
         }
 
-        // The input files follow the "Li & Lim" format
         public static void ReadOrders(string fileName, List<Order> orders)
         {
             using StreamReader input = new StreamReader(fileName);
@@ -34,7 +31,7 @@ namespace CVrpPdTwDynamic.Utils
                 Order order = new Order();
                 order.ProductCount = (int.Parse(splitted[3]));
 
-                order.Shop = new Shop()
+                order.Shop = new Pickup()
                 {
                     guid = splitted[0],
                     Latitude = int.Parse(splitted[1]),
@@ -46,13 +43,14 @@ namespace CVrpPdTwDynamic.Utils
                 };
 
                 splitted = SplitInput(input);
-                order.ShippingInfo = new ShippingInfo()
+                order.ShippingInfo = new Delivery()
                 {
                     guid = splitted[0],
                     Latitude = int.Parse(splitted[1]),
                     Longitude = int.Parse(splitted[2]),
                     StopAfter = int.Parse(splitted[4]),
                     DelayPenalty = 4,
+                    ServiceTime = 1,
                     Demand = -order.ProductCount,
                 };
 
@@ -60,36 +58,35 @@ namespace CVrpPdTwDynamic.Utils
             }
         }
 
-        // The input files follow the "Li & Lim" format
-        public static void ReadRider(string fileName,
-                                          ref List<Rider> LogisticOperators
-                                        )
+        public static List<Rider> ReadRider(string fileName)
         {
-            if (fileName == "")
+            var riders = new List<Rider>();
+            ReadRider(fileName, riders);
+            return riders;
+        }
+
+        public static void ReadRider(string fileName, List<Rider> LogisticOperators)
+        {
+
+            using StreamReader input = new StreamReader(fileName);
+            string[] splitted;
+
+            while (!input.EndOfStream)
             {
-                return;
-            }
-
-            using (StreamReader input = new StreamReader(fileName))
-            {
-
-                string[] splitted;
-
-                while (!input.EndOfStream)
+                splitted = SplitInput(input);
+                Rider op = new Rider()
                 {
-                    splitted = SplitInput(input);
-                    Rider op = new Rider();
-                    op.StartLocation = new NetTopologySuite.Geometries.Point(int.Parse(splitted[1]), int.Parse(splitted[2]));
-                    op.Capacity = int.Parse(splitted[5]);
-                    op.StartTime = int.Parse(splitted[3]);
-                    op.EndTime = int.Parse(splitted[4]);
-                    op.EndTurn = int.Parse(splitted[4]);
-                    op.Vehicle = int.Parse(splitted[6]);
-                    op.Name = splitted[0];
-                    op.Surname = splitted[0];
-                    op.guid = op.Name + op.Surname;
-                    LogisticOperators.Add(op);
-                }
+                    Name = splitted[0],
+                    Surname = splitted[0],
+                    StartLocation = new NetTopologySuite.Geometries.Point(int.Parse(splitted[1]), int.Parse(splitted[2])),
+                    StartTime = int.Parse(splitted[3]),
+                    EndTime = int.Parse(splitted[4]),
+                    EndTurn = int.Parse(splitted[4]),
+                    Capacity = int.Parse(splitted[5]),
+                    Vehicle = int.Parse(splitted[6]),
+                };
+                op.guid = op.Name + op.Surname;
+                LogisticOperators.Add(op);
             }
         }
 
@@ -115,13 +112,9 @@ namespace CVrpPdTwDynamic.Utils
                 swPd.Write(map.Reverse[i + rider] + " ");
                 swPd.Write(pdLocations[i, 0] + " " + pdLocations[i, 1]);
                 swPd.WriteLine();
-
             }
             swPd.Close();
-
         }
-
-
     }
 
 }
