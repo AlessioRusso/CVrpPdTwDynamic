@@ -21,8 +21,8 @@ namespace CVrpPdTwDynamic.Models
             {
                 var callback = routing.RegisterTransitCallback((long fromIndex, long toIndex) =>
                 {
-                    var fromNode = data.Nodes[manager.IndexToNode(fromIndex)];
-                    var toNode = data.Nodes[manager.IndexToNode(toIndex)];
+                    var fromNode = data.GetNode(manager, fromIndex);
+                    var toNode = data.GetNode(manager, toIndex);
                     return customRouter.GetDistance(op, fromNode, toNode);
                 });
                 routing.SetArcCostEvaluatorOfVehicle(callback, data.riderMap[op.guid]);
@@ -30,7 +30,7 @@ namespace CVrpPdTwDynamic.Models
 
             int demandCallbackIndex = routing.RegisterUnaryTransitCallback((long index) =>
             {
-                return data.Nodes[manager.IndexToNode(index)].Demand;
+                return data.GetNode(manager, index).Demand;
             });
 
             var vehicleCapacities = data.LogisticOperators.Select(op => op.Capacity).ToArray();
@@ -51,8 +51,8 @@ namespace CVrpPdTwDynamic.Models
             var timeCallbackIndexAll = data.LogisticOperators
                 .Select(op => routing.RegisterTransitCallback((long fromIndex, long toIndex) =>
                     {
-                        var fromNode = data.Nodes[manager.IndexToNode(fromIndex)];
-                        var toNode = data.Nodes[manager.IndexToNode(toIndex)];
+                        var fromNode = data.GetNode(manager, fromIndex);
+                        var toNode = data.GetNode(manager, toIndex);
                         return customRouter.GetDuration(op, fromNode, toNode);
                     }))
                 .ToArray();

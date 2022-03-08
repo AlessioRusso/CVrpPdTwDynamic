@@ -23,7 +23,7 @@ public class VrpPickupDelivery
 
         for (long index = 0; index < manager.GetNumberOfIndices(); index++)
         {
-            data.Nodes[manager.IndexToNode(index)].Index = index;
+            data.GetNode(manager, index).Index = index;
         }
 
         RoutingModel routing = Routing.CreateRoutingModel(manager, data, new MyMapRouter());
