@@ -1,4 +1,6 @@
 using BidirectionalMap;
+using CVrpPdTwDynamic.Enums;
+
 namespace CVrpPdTwDynamic.Models
 {
     public class DataModel
@@ -40,6 +42,22 @@ namespace CVrpPdTwDynamic.Models
 
             foreach (var rider in LogisticOperators)
             {
+                var endNode = new Idle()
+                {
+                    guid = "idle" + " " + rider.Name,
+                    Latitude = 0,
+                    Longitude = 0,
+                    DelayPenalty = DataModel.Infinite,
+                    Demand = 0,
+                    StopAfter = rider.EndTurn,
+                    guidRider = rider.guid,
+                };
+                this.Ends.Add(this.nodeMap.Count());
+                this.nodeMap.Add(endNode, this.nodeMap.Count());
+            }
+
+            foreach (var rider in LogisticOperators)
+            {
                 var startNode = new Start()
                 {
                     guid = rider.guid,
@@ -55,22 +73,6 @@ namespace CVrpPdTwDynamic.Models
                 this.nodeMap.Add(startNode, this.nodeMap.Count());
                 this.vehicleMap.Add(rider.guid, this.vehicleMap.Count());
                 this.MaxDimension.Add(DataModel.Infinite);
-            }
-
-            foreach (var rider in LogisticOperators)
-            {
-                var endNode = new Idle()
-                {
-                    guid = "idle" + " " + rider.Name,
-                    Latitude = 0,
-                    Longitude = 0,
-                    DelayPenalty = DataModel.Infinite,
-                    Demand = 0,
-                    StopAfter = rider.EndTurn,
-                    guidRider = rider.guid,
-                };
-                this.Ends.Add(this.nodeMap.Count());
-                this.nodeMap.Add(endNode, this.nodeMap.Count());
             }
 
 
