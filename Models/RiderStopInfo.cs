@@ -1,3 +1,5 @@
+using Google.OrTools.ConstraintSolver;
+
 namespace CVrpPdTwDynamic.Models
 {
 
@@ -8,17 +10,23 @@ namespace CVrpPdTwDynamic.Models
         public long Longitude { get; }
     }
 
-    public interface INodeInfo : IRoutableLocation
+    public class NodeInfo : IRoutableLocation
     {
-        public long StopAfter { get; }
-        public long StopBefore { get; }
-        public long DelayPenalty { get; }
-        public long Demand { get; }
-        public (long, long) PlannedStop { get; set; }
-    }
+        public IntVar this[RoutingDimension dimension] => dimension.CumulVar(Index);
+        public IntVar NextVar(RoutingModel routing) => routing.NextVar(Index);
+        public IntVar Vehicle(RoutingModel routing) => routing.VehicleVar(Index);
 
-    public abstract class RiderStopInfo : INodeInfo
-    {
+        public void SetRangeConstraints(RoutingDimension timeDimension)
+        {
+            timeDimension.CumulVar(Index).SetRange(StopAfter, StopBefore);
+            if (DelayPenalty > 0)
+            {
+                timeDimension.SetCumulVarSoftUpperBound(Index, StopAfter, DelayPenalty);
+            }
+        }
+
+        public virtual bool IsEnd => false;
+
         public string guid { get; set; } = null!;
         public long Latitude { get; set; }
         public long Longitude { get; set; }
@@ -28,16 +36,19 @@ namespace CVrpPdTwDynamic.Models
         public long Demand { get; set; }
         public string Name { get; set; } = null!;
         public (long, long) PlannedStop { get; set; }
+        public long Index { get; set; }
     }
 
-    public class Start : RiderStopInfo
+    public class Start : NodeInfo
     {
         public string guidRider;
     }
 
-    public class Idle : RiderStopInfo
+    public class Idle : NodeInfo
     {
         public string guidRider;
+
+        public override bool IsEnd => true;
     }
 
 }

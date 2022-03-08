@@ -15,24 +15,22 @@ namespace CVrpPdTwDynamic.Models
         {
 
             var customRouter = new CustomRouter(mapRouter);
-
             RoutingModel routing = new RoutingModel(manager);
 
             foreach (var op in data.LogisticOperators)
             {
                 var callback = routing.RegisterTransitCallback((long fromIndex, long toIndex) =>
                 {
-                    var fromNode = data.nodeMap.Reverse[manager.IndexToNode(fromIndex)];
-                    var toNode = data.nodeMap.Reverse[manager.IndexToNode(toIndex)];
+                    var fromNode = data.Nodes[manager.IndexToNode(fromIndex)];
+                    var toNode = data.Nodes[manager.IndexToNode(toIndex)];
                     return customRouter.GetDistance(op, fromNode, toNode);
                 });
-                routing.SetArcCostEvaluatorOfVehicle(callback, data.vehicleMap[op.guid]);
+                routing.SetArcCostEvaluatorOfVehicle(callback, data.riderMap[op.guid]);
             }
 
-            // Capacity Constraints.
             int demandCallbackIndex = routing.RegisterUnaryTransitCallback((long index) =>
             {
-                return data.nodeMap.Reverse[manager.IndexToNode(index)].Demand;
+                return data.Nodes[manager.IndexToNode(index)].Demand;
             });
 
             var vehicleCapacities = data.LogisticOperators.Select(op => op.Capacity).ToArray();
@@ -47,15 +45,14 @@ namespace CVrpPdTwDynamic.Models
             var capacityDimension = routing.GetDimensionOrDie("Capacity");
             foreach (var op in data.LogisticOperators)
             {
-                var index = manager.NodeToIndex(data.riderMap[op.guid]);
-                capacityDimension.CumulVar(index).SetValue(op.Cargo);
+                op.StartNode[capacityDimension].SetValue(op.Cargo);
             }
 
             var timeCallbackIndexAll = data.LogisticOperators
                 .Select(op => routing.RegisterTransitCallback((long fromIndex, long toIndex) =>
                     {
-                        var fromNode = data.nodeMap.Reverse[manager.IndexToNode(fromIndex)];
-                        var toNode = data.nodeMap.Reverse[manager.IndexToNode(toIndex)];
+                        var fromNode = data.Nodes[manager.IndexToNode(fromIndex)];
+                        var toNode = data.Nodes[manager.IndexToNode(toIndex)];
                         return customRouter.GetDuration(op, fromNode, toNode);
                     }))
                 .ToArray();
@@ -70,43 +67,23 @@ namespace CVrpPdTwDynamic.Models
 
             RoutingDimension timeDimension = routing.GetMutableDimension("Time");
 
-            foreach (var (node, i) in data.nodeMap.Forward)
+            foreach (var node in data.Nodes)
             {
-
-                if (node is Start)
-                {
-                    long index = manager.NodeToIndex(i);
-                    timeDimension.CumulVar(index).SetRange(node.StopAfter, node.StopBefore);
-                }
-                else if (node is Idle end)
-                {
-                    long index = manager.GetEndIndex(data.vehicleMap[end.guidRider]);
-                    timeDimension.CumulVar(index).SetRange(node.StopAfter, node.StopBefore);
-                    timeDimension.SetCumulVarSoftUpperBound(index, node.StopAfter, node.DelayPenalty);
-                }
-                else
-                {
-                    long index = manager.NodeToIndex(i);
-                    timeDimension.CumulVar(index).SetRange(node.StopAfter, node.StopBefore);
-                    timeDimension.SetCumulVarSoftUpperBound(index, node.StopAfter, node.DelayPenalty);
-                }
+                node.SetRangeConstraints(timeDimension);
             }
 
             Solver solver = routing.solver();
             foreach (var order in data.OrdersAndForced)
             {
-                long deliveryIndex = manager.NodeToIndex(data.nodeMap.Forward[order.ShippingInfo]);
-                if (order.ShippingInfo.guidRider is not null)
-                    routing.VehicleVar(deliveryIndex).SetValue(data.riderMap[order.ShippingInfo.guidRider]);
+                if (order.Delivery.guidRider is not null)
+                    order.Delivery.Vehicle(routing).SetValue(data.riderMap[order.Delivery.guidRider]);
 
-                if (order.ShippingInfo.Type != StopType.ForcedStop) // if Shop is not null
+                if (order.Type != StopType.DeliveryOnly)
                 {
-                    long pickupIndex = manager.NodeToIndex(data.nodeMap.Forward[order.Shop]);
-                    routing.AddPickupAndDelivery(pickupIndex, deliveryIndex);
-                    solver.Add(solver.MakeEquality(routing.VehicleVar(pickupIndex), routing.VehicleVar(deliveryIndex)));
-                    solver.Add(solver.MakeLessOrEqual(timeDimension.CumulVar(pickupIndex),
-                                                      timeDimension.CumulVar(deliveryIndex)));
-                    routing.AddVariableMinimizedByFinalizer(timeDimension.CumulVar(deliveryIndex));
+                    routing.AddPickupAndDelivery(order.Pickup.Index, order.Delivery.Index);
+                    solver.Add(order.Pickup.Vehicle(routing) == order.Delivery.Vehicle(routing));
+                    solver.Add(order.Pickup[timeDimension] <= order.Delivery[timeDimension]);
+                    routing.AddVariableMinimizedByFinalizer(order.Delivery[timeDimension]);
                 }
             }
             return routing;

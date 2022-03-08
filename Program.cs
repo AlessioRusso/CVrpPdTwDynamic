@@ -8,7 +8,6 @@ public class VrpPickupDelivery
 {
     public static void Main(String[] args)
     {
-
         var LogisticOperators = IOReader.ReadRider(args[1]);
 
         var OrdersAndForced = IOReader.ReadOrders(args[0]);
@@ -16,11 +15,16 @@ public class VrpPickupDelivery
         DataModel data = new DataModel(LogisticOperators, OrdersAndForced);
 
         RoutingIndexManager manager = new RoutingIndexManager(
-                data.nodeMap.Count(),
+                data.Nodes.Count(),
                 data.LogisticOperators.Count(),
                 data.Starts.ToArray(),
                 data.Ends.ToArray()
         );
+
+        for (long index = 0; index < manager.GetNumberOfIndices(); index++)
+        {
+            data.Nodes[manager.IndexToNode(index)].Index = index;
+        }
 
         RoutingModel routing = Routing.CreateRoutingModel(manager, data, new MyMapRouter());
         RoutingSearchParameters searchParameters =

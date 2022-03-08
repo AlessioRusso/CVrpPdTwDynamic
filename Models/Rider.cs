@@ -1,11 +1,9 @@
 using NetTopologySuite.Geometries;
 
-
 namespace CVrpPdTwDynamic.Models
 {
     public class Rider
     {
-
         public Rider()
         {
             this.DeliveryFixedFee = 1;
@@ -27,5 +25,7 @@ namespace CVrpPdTwDynamic.Models
         public int EndTurn; // park node (endTurn, infinite) 
         public long Vehicle;
         public string? forcedNextNode { get; set; } = null!;
+        public Start StartNode;
+        public Idle EndNode;
     }
 }

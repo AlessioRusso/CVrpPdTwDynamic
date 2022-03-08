@@ -12,7 +12,7 @@ namespace CVrpPdTwDynamic.Services
         }
 
 
-        public long GetDistance(Rider op, INodeInfo fromNode, INodeInfo toNode)
+        public long GetDistance(Rider op, NodeInfo fromNode, NodeInfo toNode)
         {
             // from rider node that is constrained
             if (fromNode is Start && op.forcedNextNode is not null)
@@ -42,7 +42,7 @@ namespace CVrpPdTwDynamic.Services
             return _mapRouter.GetDistance(op, fromNode, toNode);
         }
 
-        public long GetDuration(Rider op, INodeInfo fromNode, INodeInfo toNode)
+        public long GetDuration(Rider op, NodeInfo fromNode, NodeInfo toNode)
         {
 
             if (fromNode is Start && toNode is Idle)

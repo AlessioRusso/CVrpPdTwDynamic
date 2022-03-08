@@ -1,5 +1,5 @@
-using BidirectionalMap;
 using CVrpPdTwDynamic.Enums;
+using Google.OrTools.ConstraintSolver;
 
 namespace CVrpPdTwDynamic.Models
 {
@@ -8,41 +8,35 @@ namespace CVrpPdTwDynamic.Models
 
         public List<long> MaxDimension = new List<long>();
         public const int Infinite = 100000000;
-        public List<int> Starts;
-        public List<int> Ends;
+        public List<int> Starts = new();
+        public List<int> Ends = new();
         public List<Rider> LogisticOperators;
         public List<Order> OrdersAndForced;
-        public Dictionary<string, int> riderMap;
-        public BiMap<INodeInfo, int> nodeMap;
-        public Dictionary<string, int> vehicleMap;
+        public Dictionary<string, int> riderMap = new();
+        public List<NodeInfo> Nodes = new();
 
+
+        public NodeInfo GetNode(RoutingIndexManager manager, long index) => this.Nodes[manager.IndexToNode(index)];
         public DataModel(List<Rider> LogisticOperators, List<Order> OrdersAndForced)
         {
-            this.Starts = new List<int>();
-            this.Ends = new List<int>();
-            this.nodeMap = new BiMap<INodeInfo, int>();
-            this.riderMap = new Dictionary<string, int>();
-            this.vehicleMap = new Dictionary<string, int>();
-
 
             this.LogisticOperators = LogisticOperators;
             this.OrdersAndForced = OrdersAndForced;
-            this.Starts = new List<int>();
 
             foreach (var order in this.OrdersAndForced)
             {
-                if (order.ShippingInfo.Type == StopType.ForcedStop)
-                    this.nodeMap.Add(order.ShippingInfo, this.nodeMap.Count());
+                if (order.Type == StopType.DeliveryOnly)
+                    this.Nodes.Add(order.Delivery);
                 else
                 {
-                    this.nodeMap.Add(order.Shop, this.nodeMap.Count());
-                    this.nodeMap.Add(order.ShippingInfo, this.nodeMap.Count());
+                    this.Nodes.Add(order.Pickup);
+                    this.Nodes.Add(order.Delivery);
                 }
             }
 
             foreach (var rider in LogisticOperators)
             {
-                var endNode = new Idle()
+                rider.EndNode = new Idle()
                 {
                     guid = "idle" + " " + rider.Name,
                     Latitude = 0,
@@ -52,30 +46,27 @@ namespace CVrpPdTwDynamic.Models
                     StopAfter = rider.EndTurn,
                     guidRider = rider.guid,
                 };
-                this.Ends.Add(this.nodeMap.Count());
-                this.nodeMap.Add(endNode, this.nodeMap.Count());
+                this.Ends.Add(this.Nodes.Count());
+                this.Nodes.Add(rider.EndNode);
             }
 
             foreach (var rider in LogisticOperators)
             {
-                var startNode = new Start()
+                rider.StartNode = new Start()
                 {
                     guid = rider.guid,
                     guidRider = rider.guid,
                     Latitude = (long)rider.StartLocation.Coordinate.X,
                     Longitude = (long)rider.StartLocation.Coordinate.Y,
-                    DelayPenalty = DataModel.Infinite,
+                    DelayPenalty = 0,
                     StopAfter = rider.StartTime,
                     Demand = 0,
                 };
-                this.Starts.Add(this.nodeMap.Count());
-                this.riderMap.Add(rider.guid, this.nodeMap.Count());
-                this.nodeMap.Add(startNode, this.nodeMap.Count());
-                this.vehicleMap.Add(rider.guid, this.vehicleMap.Count());
+                this.Starts.Add(this.Nodes.Count());
+                this.riderMap.Add(rider.guid, this.riderMap.Count());
+                this.Nodes.Add(rider.StartNode);
                 this.MaxDimension.Add(DataModel.Infinite);
             }
-
-
         }
     }
 }

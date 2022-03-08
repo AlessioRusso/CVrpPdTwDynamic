@@ -1,6 +1,6 @@
 namespace CVrpPdTwDynamic.Models
 {
-    public class Pickup : RiderStopInfo
+    public class Pickup : NodeInfo
     {
         public System.Guid ShopId;
         public long SinglePickupServiceTime { get; set; }

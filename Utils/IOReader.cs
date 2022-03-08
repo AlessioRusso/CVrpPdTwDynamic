@@ -31,7 +31,7 @@ namespace CVrpPdTwDynamic.Utils
                 Order order = new Order();
                 order.ProductCount = (int.Parse(splitted[3]));
 
-                order.Shop = new Pickup()
+                order.Pickup = new Pickup()
                 {
                     guid = splitted[0],
                     Latitude = int.Parse(splitted[1]),
@@ -43,7 +43,7 @@ namespace CVrpPdTwDynamic.Utils
                 };
 
                 splitted = SplitInput(input);
-                order.ShippingInfo = new Delivery()
+                order.Delivery = new Delivery()
                 {
                     guid = splitted[0],
                     Latitude = int.Parse(splitted[1]),
