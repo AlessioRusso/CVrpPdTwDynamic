@@ -1,120 +1,81 @@
 using BidirectionalMap;
+using CVrpPdTwDynamic.Enums;
+
 namespace CVrpPdTwDynamic.Models
 {
     public class DataModel
     {
-        public int vehicleNumber { get; private set; }
-        public long[] vehicleCapacities { get; private set; }
-        public long[] Cargo { get; private set; }
-        public long[] Demands { get; private set; }
-        public int[] vehicleCost { get; private set; }
-        public int[] vehicleSpeed { get; private set; }
-        public long[,] Locations { get; private set; }
-        public long[,] TimeWindows { get; private set; }
-        public int[][] PickupsDeliveries { get; private set; }
-        public int Depot = 0;
-        public const int CostPickup = 5; // cents
-        public const int ServiceTimeSinglePickup = 0;
+
+        public List<long> MaxDimension = new List<long>();
         public const int Infinite = 100000000;
-        public const int Penalty = 100;
-        public int pick_service_time = 2;
-        public int delivery_service_time = 1;
-        public int[] Starts = { };
-        public int[] Ends = { };
+        public List<int> Starts;
+        public List<int> Ends;
+        public List<Rider> LogisticOperators;
+        public List<Order> OrdersAndForced;
+        public Dictionary<string, int> riderMap;
+        public BiMap<INodeInfo, int> nodeMap;
+        public Dictionary<string, int> vehicleMap;
 
-        public DataModel(int n, List<long> cap, List<long> dem, long[,] loc,
-                        long[,] tw, int[][] pickDel, List<int> starts, List<int> ends,
-                        List<int> speed, List<int> cost, long[] cargo)
+        public DataModel(List<Rider> LogisticOperators, List<Order> OrdersAndForced)
         {
-            this.vehicleNumber = n;
-            Starts = starts.ToArray();
-            Ends = ends.ToArray();
-            vehicleCapacities = cap.ToArray();
-            Demands = dem.ToArray();
-            Locations = loc;
-            TimeWindows = tw;
-            PickupsDeliveries = pickDel;
-            vehicleCost = new int[this.vehicleNumber];
-            vehicleSpeed = new int[this.vehicleNumber];
-            for (int i = 0; i < this.vehicleNumber; i++)
+            this.Starts = new List<int>();
+            this.Ends = new List<int>();
+            this.nodeMap = new BiMap<INodeInfo, int>();
+            this.riderMap = new Dictionary<string, int>();
+            this.vehicleMap = new Dictionary<string, int>();
+
+
+            this.LogisticOperators = LogisticOperators;
+            this.OrdersAndForced = OrdersAndForced;
+            this.Starts = new List<int>();
+
+            foreach (var order in this.OrdersAndForced)
             {
-                vehicleCost[i] = cost[i];
-                vehicleSpeed[i] = speed[i];
-            }
-            Cargo = cargo;
-        }
-
-
-        static public DataModel BuildDataModel(long[,] locations_rider, long[,] locations, long[,] tw_rider,
-                                  long[,] tw, List<long> demands, List<long> cap_rider,
-                                  List<Tuple<string, string>> Pd,
-                                  BiMap<string, int> map,
-                                  List<int> speed,
-                                  List<int> cost,
-                                  long[] cargo,
-                                  int vehicleNumber
-       )
-
-        {
-            List<long> new_demands = new List<long>();
-            long[,] new_locations = new long[locations_rider.GetLength(0) + locations.GetLength(0), 2];
-            long[,] new_tw = new long[tw_rider.GetLength(0) + tw.GetLength(0), 2];
-
-
-            List<int> starts = new List<int>();
-            List<int> ends = new List<int>();
-
-            for (int i = 0; i < vehicleNumber; i++)
-            {
-                starts.Add(i + 1);
-                ends.Add(0);
-            }
-
-            // depot 
-            new_locations[0, 0] = locations[0, 0];
-            new_locations[0, 1] = locations[0, 1];
-            new_tw[0, 0] = tw[0, 0];
-            new_tw[0, 1] = tw[0, 1];
-
-            for (int i = 0; i < locations_rider.GetLength(0); i++)
-            {
-                new_locations[i + 1, 0] = locations_rider[i, 0];
-                new_locations[i + 1, 1] = locations_rider[i, 1];
-                new_tw[i + 1, 0] = tw_rider[i, 0];
-                new_tw[i + 1, 1] = tw_rider[i, 1];
-            }
-            int j = locations_rider.GetLength(0);
-            for (int i = 1; i < locations.GetLength(0); i++)
-            {
-                if (locations[i, 0] != 0 & locations[i, 1] != 0)
+                if (order.ShippingInfo.Type == StopType.ForcedStop)
+                    this.nodeMap.Add(order.ShippingInfo, this.nodeMap.Count());
+                else
                 {
-                    new_locations[i + j, 0] = locations[i, 0];
-                    new_locations[i + j, 1] = locations[i, 1];
-                    new_tw[i + j, 0] = tw[i, 0];
-                    new_tw[i + j, 1] = tw[i, 1];
+                    this.nodeMap.Add(order.Shop, this.nodeMap.Count());
+                    this.nodeMap.Add(order.ShippingInfo, this.nodeMap.Count());
                 }
             }
 
-            // add demand rider
-            for (int i = 0; i < vehicleNumber; i++)
+            foreach (var rider in LogisticOperators)
             {
-                new_demands.Add(0);
+                var endNode = new Idle()
+                {
+                    guid = "idle" + " " + rider.Name,
+                    Latitude = 0,
+                    Longitude = 0,
+                    DelayPenalty = DataModel.Infinite,
+                    Demand = 0,
+                    StopAfter = rider.EndTurn,
+                    guidRider = rider.guid,
+                };
+                this.Ends.Add(this.nodeMap.Count());
+                this.nodeMap.Add(endNode, this.nodeMap.Count());
             }
 
-            // add demans depot + locations
-            foreach (var d in demands)
-                new_demands.Add(d);
-
-            int[][] mapped_pd = new int[Pd.Count][];
-            int n_pair = 0;
-            foreach (var pair in Pd)
+            foreach (var rider in LogisticOperators)
             {
-                mapped_pd[n_pair] = new int[] { map.Forward[pair.Item1], map.Forward[pair.Item2] };
-                n_pair++;
+                var startNode = new Start()
+                {
+                    guid = rider.guid,
+                    guidRider = rider.guid,
+                    Latitude = (long)rider.StartLocation.Coordinate.X,
+                    Longitude = (long)rider.StartLocation.Coordinate.Y,
+                    DelayPenalty = DataModel.Infinite,
+                    StopAfter = rider.StartTime,
+                    Demand = 0,
+                };
+                this.Starts.Add(this.nodeMap.Count());
+                this.riderMap.Add(rider.guid, this.nodeMap.Count());
+                this.nodeMap.Add(startNode, this.nodeMap.Count());
+                this.vehicleMap.Add(rider.guid, this.vehicleMap.Count());
+                this.MaxDimension.Add(DataModel.Infinite);
             }
 
-            // First Run
-            return new DataModel(vehicleNumber, cap_rider, new_demands, new_locations, new_tw, mapped_pd, starts, ends, speed, cost, cargo);
+
         }
-    };
+    }
 }

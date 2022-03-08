@@ -64,3 +64,4 @@ C:\Users\Alessio\Desktop\CVrpPdTwDynamic\obj\Debug\net6.0\refint\dynamic.dll
 C:\Users\Alessio\Desktop\CVrpPdTwDynamic\obj\Debug\net6.0\dynamic.pdb
 C:\Users\Alessio\Desktop\CVrpPdTwDynamic\obj\Debug\net6.0\dynamic.genruntimeconfig.cache
 C:\Users\Alessio\Desktop\CVrpPdTwDynamic\obj\Debug\net6.0\ref\dynamic.dll
+C:\Users\Alessio\Desktop\CVrpPdTwDynamic\bin\Debug\net6.0\NetTopologySuite.dll

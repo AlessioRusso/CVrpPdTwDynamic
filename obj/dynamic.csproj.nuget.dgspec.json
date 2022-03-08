@@ -45,6 +45,10 @@
             "Google.OrTools": {
               "target": "Package",
               "version": "[9.2.9972, )"
+            },
+            "NetTopologySuite": {
+              "target": "Package",
+              "version": "[2.4.0, )"
             }
           },
           "imports": [
