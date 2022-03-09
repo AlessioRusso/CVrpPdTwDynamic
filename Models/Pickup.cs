@@ -1,9 +1,7 @@
-namespace CVrpPdTwDynamic.Models
+namespace CVrpPdTwDynamic.Models;
+public class Pickup : NodeInfo
 {
-    public class Pickup : NodeInfo
-    {
-        public System.Guid ShopId;
-        public long SinglePickupServiceTime { get; set; }
-        public long BaseServiceTime { get; set; }
-    }
+    public System.Guid ShopId;
+    public long SinglePickupServiceTime { get; set; }
+    public long BaseServiceTime { get; set; }
 }

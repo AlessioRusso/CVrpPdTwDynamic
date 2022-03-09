@@ -6,7 +6,7 @@ using CVrpPdTwDynamic.Services;
 
 public class VrpPickupDelivery
 {
-    public static void Main(String[] args)
+    static void Main(String[] args)
     {
         var LogisticOperators = IOReader.ReadRider(args[1]);
 
@@ -20,11 +20,6 @@ public class VrpPickupDelivery
                 data.Starts.ToArray(),
                 data.Ends.ToArray()
         );
-
-        for (long index = 0; index < manager.GetNumberOfIndices(); index++)
-        {
-            data.GetNode(manager, index).Index = index;
-        }
 
         RoutingModel routing = Routing.CreateRoutingModel(manager, data, new MyMapRouter());
         RoutingSearchParameters searchParameters =

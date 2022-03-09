@@ -1,14 +1,12 @@
 using CVrpPdTwDynamic.Enums;
 
-namespace CVrpPdTwDynamic.Models
+namespace CVrpPdTwDynamic.Models;
+public class Order
 {
-    public class Order
-    {
-        public Guid id;
+    public Guid id;
 
-        public StopType Type => StopType.PickupAndDelivery;
-        public long ProductCount { get; set; }
-        public Pickup Pickup { get; set; } = null!;
-        public Delivery Delivery { get; set; } = null!;
-    }
+    public StopType Type => StopType.PickupAndDelivery;
+    public long ProductCount { get; set; }
+    public Pickup Pickup { get; set; } = null!;
+    public Delivery Delivery { get; set; } = null!;
 }

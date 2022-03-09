@@ -1,9 +1,6 @@
-namespace CVrpPdTwDynamic.Enums
+namespace CVrpPdTwDynamic.Enums;
+public enum StopType
 {
-    public enum StopType
-    {
-        PickupAndDelivery,
-        DeliveryOnly,
-    }
-
+    PickupAndDelivery,
+    DeliveryOnly,
 }
